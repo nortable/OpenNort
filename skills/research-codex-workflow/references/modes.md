@@ -101,6 +101,16 @@ Behavior:
 - build a deterministic local-first product only after explicit authorization;
 - keep the skill-first artifact contracts compatible with the product phase.
 
+## Cross-Cutting Shapes (orthogonal to the mode)
+
+- **Code review (PR/diff)**: pick the mode by risk (localized review → Mode 0; risky diff → Mode 2
+  pointed at the diff) and load `code-review.md`. It reuses the same Finding→Critique→Tribunal→Judge
+  substrate with code lenses — do not build a separate mechanism.
+- **Web / literature research**: opt-in when a finding needs an external fact (leakage, prior-art,
+  SOTA). Load `web-research.md`; the Literature Scout retrieves via `scripts/fetch.py` and emits
+  `source-record` evidence. Forbidden by a charter `non_goals` that bans external APIs → external
+  claims are logged as gaps, not faked.
+
 ## Negative Rules
 
 - Do not escalate just because a repository is unfamiliar.

@@ -77,12 +77,26 @@ def unjudged_packet(run_root: Path) -> None:
     )
 
 
+def ledger_issue_without_judged_packet(run_root: Path) -> None:
+    """Append an accepted ledger issue that traces to NO judged packet (a second-discovery finding
+    written straight to the ledger). validate_ledger_packet_coverage must reject it."""
+    def mutate(d: dict) -> None:
+        d["decisions"].append({
+            "issue_id": "ISS-ORPHAN-2ND-PASS", "title": "second-pass finding appended to ledger",
+            "decision_class": "accepted_non_blocking", "action": "DEFER", "evidence_ids": [],
+            "affected_files": [], "recommended_change": "none", "alternatives": [],
+            "user_decision_needed": False, "edit_after_approval": False,
+        })
+    _patch(run_root / "round-e-decision-ledger.yaml", mutate)
+
+
 NEGATIVE_CONTROLS = [
     ("dropped required key", drop_required_key),
     ("dangling evidence_id", dangling_evidence_id),
     ("anonymization leak (author identity in a critique)", anonymization_leak),
     ("edit_permission_before_approval = True", edit_before_approval),
     ("evidence packet with no judge score", unjudged_packet),
+    ("accepted ledger issue with no judged packet", ledger_issue_without_judged_packet),
 ]
 
 

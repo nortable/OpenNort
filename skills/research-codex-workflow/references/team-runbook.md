@@ -105,6 +105,26 @@ the doc-vs-tree existence findings from Data/Baseline/Code/Claim auditors are mo
 `contestability: low` → light confirmation pass; reserve the multi-lens Falsifier panel for the
 Methodologist's deep statistical-validity findings, where a wrong call actually costs something.
 
+### Code Review (PR / diff review)
+
+Load `references/code-review.md`. Reuses the full Round 0→G substrate pointed at a diff; record
+base/head SHAs in the charter.
+
+- Correctness/bug finder;
+- Security finder;
+- Performance or Reuse/Simplification finder (by diff risk);
+- Tests/regressions + API/compatibility finder;
+- Falsifier (adversarial route, with a reproducing test as `minimal_test_to_resolve`);
+- Evidence Auditor;
+- 2 Judges.
+
+Route Round B by contestability: an obvious bug that reproduces trivially is `contestability: low` →
+one light confirmation; a subtle race/edge case is `medium|high` → adversarial panel, refuted-by-
+default unless the buggy path is shown reachable. Ledger classes map to merge gates: `accepted_blocker`
+= must-fix-before-merge, `accepted_non_blocking` = nit, `rejected_or_unsupported` = false positive,
+`needs_user_decision` = author's design call. Stop at Round F before editing the author's code; apply
+approved fixes (each with a test that proves it) in isolated worktrees at Round G.
+
 ### Open Literature or Design Research
 
 - 2-4 Literature Scouts with distinct source strategies;

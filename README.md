@@ -31,25 +31,34 @@ runtime (the main agent as Orchestrator plus `multi_agent_v1` subagents; no JS e
 - **A deterministic substrate** — every artifact has a canonical schema
   (`scripts/schemas.py`) that a stdlib validator (`scripts/validate_artifacts.py`) actually enforces:
   per-instance schemas, cross-artifact referential integrity, anonymization, concurrency/budget caps,
-  **judge coverage** (every assembled evidence packet must be scored — no silent promotion of unjudged
-  evidence), and a scan that forbids decision verbs in worker artifacts.
-- **Honesty about reach** — claims that need facts outside the repo (dataset leakage, prior-art/SOTA,
-  pretraining provenance) are logged as `external_verification_unavailable` when no web/fetch tool
-  exists, rather than passed off as locally verified.
+  **judge coverage** (every assembled evidence packet must be scored), **ledger→packet coverage**
+  (every accepted ledger issue must trace to a judged packet — a second discovery round cannot append
+  straight to the ledger), and a scan that forbids decision verbs in worker artifacts. `--audit-run
+  <dir>` gates any real run tree with these checks (not just the synthetic fixture).
+- **Web research with a reproducible evidence contract** — `scripts/fetch.py` gives the Literature
+  Scout a real retrieval primitive: it fetches a URL, caches the bytes, and emits a `source-record`
+  (url + retrieval_date + content_sha256), so a web-backed claim is reproducible and tamper-evident.
+  Treated as untrusted data; opt-in per charter; absent a web tool, external-dependent claims are
+  logged as `external_verification_unavailable` rather than faked. See `references/web-research.md`.
+- **Code review reuses the substrate** — point the Round 0→G pipeline at a diff with code lenses
+  (correctness / security / performance / reuse / tests / compatibility); proportionate verification,
+  judge coverage, and the Round F checkpoint all carry over unchanged. See `references/code-review.md`.
 - **Retained per-subagent debug records** — each dispatched subagent persists `agents/<agent_id>.json`
   for replay, audit, and later upgrades.
 - **A one-command self-test** (`scripts/selftest.py`) that generates a synthetic run, validates it, and
   proves the harness *rejects* a dropped key, a dangling reference, an anonymization leak, an
-  edit-before-approval, and an unjudged evidence packet.
+  edit-before-approval, an unjudged evidence packet, and an accepted ledger issue with no judged
+  packet. (`scripts/fetch.py --selftest` separately proves the fetch/cache/hash path offline.)
 
 ## Layout
 
 ```
 skills/research-codex-workflow/   the skill (router + references + scripts + templates)
   SKILL.md                        compact mode router and invariants
-  references/                     protocol, roster, contracts, loop guard, runbook, dispatch
+  references/                     protocol, roster, contracts, loop guard, runbook, dispatch,
+                                  code-review, web-research
   scripts/                        schemas.py, validate_artifacts.py, run_synthetic_fixture.py,
-                                  create_run_workspace.py, selftest.py
+                                  create_run_workspace.py, selftest.py, fetch.py
   assets/templates/               JSON-compatible YAML artifact templates
   examples/                       synthetic adversarial fixture
 docs/                             design notes

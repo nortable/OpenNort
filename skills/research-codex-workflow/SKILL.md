@@ -31,6 +31,11 @@ This skill (its `SKILL.md` and references) is the authoritative skill-first exec
 3. **Mode 2 - Full adversarial**: explicit requests for adversarial, red-team, full-agent, multi-agent, research-team, multiple agents, 对抗模式, 多 Agent, 多智能体, or equivalent. Load `references/full-adversarial-workflow.md` and run Round 0 through Round F (Round G only after user approval).
 4. **Mode 3 - Product-build**: only when the user explicitly authorizes the standalone `research-team` product or changes `allow_product_build` to true. Load `references/product-build-spec.md`; otherwise reject product scaffolding and stay skill-first.
 
+Cross-cutting task shapes (pick a mode above, then load the matching reference):
+
+- **Code review / PR / diff review** — load `references/code-review.md`. A small localized review is Mode 0; a full adversarial review of a risky diff is Mode 2 pointed at the diff. Reuses the Finding→Critique→Tribunal→Judge substrate with code lenses; never a parallel mechanism.
+- **Web / literature research** — load `references/web-research.md`. Opt-in; the Literature Scout retrieves with `scripts/fetch.py` (or a verified native web tool) and produces `source-record` evidence. Absent a web tool, external-dependent claims are logged as gaps, never faked.
+
 Negative routing:
 
 - An unfamiliar repository alone does not trigger full adversarial mode.
@@ -65,6 +70,8 @@ For Mode 2, load these references:
 - `references/experiment-card.md` for preregistered experiments.
 - `references/loop-guard.md` for stagnation and repair-loop termination.
 - `references/worktrees-and-artifacts.md` for write isolation and reportable evidence.
+- `references/code-review.md` when the run is a PR/diff review rather than a research audit.
+- `references/web-research.md` when a finding needs an external fact (leakage, prior-art, SOTA).
 
 Round summary:
 

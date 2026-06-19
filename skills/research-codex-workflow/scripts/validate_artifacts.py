@@ -338,6 +338,47 @@ def validate_judge_coverage(run_root: Path, failures: list[str]) -> None:
             )
 
 
+def validate_ledger_packet_coverage(run_root: Path, failures: list[str]) -> None:
+    """R29 enforcement: every ACCEPTED ledger issue must trace to a judged evidence packet.
+
+    Closes the hole left by validate_judge_coverage (which only checks packets that WERE built): a
+    second discovery round can append a finding straight into the Round E ledger as accepted without
+    ever building a packet or running the evidence tribunal + judge panel. Here, every
+    accepted_blocker / accepted_non_blocking decision must share an evidence_id with some packet that
+    has a Round D judge score. rejected_or_unsupported and needs_user_decision are exempt (they are not
+    accepted claims being acted on)."""
+    ledger_path = run_root / "round-e-decision-ledger.yaml"
+    if not ledger_path.exists():
+        return
+    ledger = load_json_yaml(ledger_path)
+    decisions = ledger.get("decisions", []) if isinstance(ledger, dict) else []
+    if not decisions:
+        return
+    judged_packets = {
+        s["packet_id"]
+        for j in sorted(run_root.glob("round-d-judge-scores/*.yaml"))
+        for s in [load_json_yaml(j)]
+        if isinstance(s, dict) and s.get("packet_id")
+    }
+    judged_evidence: set[str] = set()
+    for p in sorted(run_root.glob("evidence-packets/*.yaml")):
+        packet = load_json_yaml(p)
+        if isinstance(packet, dict) and packet.get("packet_id") in judged_packets:
+            judged_evidence.update(packet.get("accepted_evidence_ids", []) or [])
+    for d in decisions:
+        if not isinstance(d, dict):
+            continue
+        if d.get("decision_class") in {"accepted_blocker", "accepted_non_blocking"}:
+            eids = set(d.get("evidence_ids", []) or [])
+            if not (eids & judged_evidence):
+                failures.append(
+                    f"round-e-decision-ledger.yaml: accepted issue {d.get('issue_id', '?')!r} "
+                    f"({d.get('decision_class')}) has no evidence_id tracing to a judged packet — it "
+                    f"bypassed the evidence tribunal + judge panel (e.g. a second discovery round "
+                    f"appended straight to the ledger)"
+                )
+
+
 def validate_proportionate_verification(run_root: Path, warnings: list[str]) -> None:
     """R26 (advisory): verification effort should scale with a finding's contestability. A
     low-contestability binary fact (file exists / number A vs B) needs ONE confirmation pass, not a
@@ -629,6 +670,7 @@ def validate_real_run(run_root: Path, warnings: list[str]) -> list[str]:
     scan_forbidden_worker_actions(run_root, failures)
     validate_packet_provenance(run_root, failures)
     validate_judge_coverage(run_root, failures)
+    validate_ledger_packet_coverage(run_root, failures)
     validate_anonymization(run_root, failures)
     validate_round_completeness(run_root, failures)
     validate_proportionate_verification(run_root, warnings)

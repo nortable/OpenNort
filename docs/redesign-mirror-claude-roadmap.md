@@ -222,3 +222,33 @@ assembled packets while Round E promoted all 4. Carried items:
 
 Re-run `scripts/selftest.py` (now 5 negative controls) and `--run-root examples/synthetic-run` after
 this batch; the committed run carries depth/contestability so `--run-root` stays warning-free.
+
+## Iteration 3 — ledger hardening, web, code review (live supervision of a real Codex run)
+
+Supervising a real post-update Codex run exposed (a) a second discovery round appending findings
+straight into the Round E ledger without B→C→D, which `validate_judge_coverage` could not catch (no
+packet was built), and (b) that `--run-root` is fixture-specific and cannot gate a real run. Carried:
+
+- **R29 [M] Ledger→packet coverage (hard).** `validate_ledger_packet_coverage`: every accepted ledger
+  issue (accepted_blocker / accepted_non_blocking) must share an evidence_id with a judged packet, or
+  it bypassed the tribunal + judge panel. New selftest control (`ledger_issue_without_judged_packet`).
+  Verified: it flags the real run's second-pass A9/A11. Files: validate_artifacts.py, selftest.py.
+- **R30 [M] `--audit-run` general run gate.** Extract the fixture-agnostic substrate checks into
+  `validate_real_run()`, callable as `validate_artifacts.py --audit-run <dir>` to gate any real run
+  tree (the old `--run-root` asserts the synthetic fixture's exact filenames). Files:
+  validate_artifacts.py.
+- **R31 [L] Web research (Literature Scout落地).** `scripts/fetch.py` — stdlib urllib fetch + cache +
+  content_sha256, offline-safe (`file://` + `--selftest`), emits a `source-record` (new schema +
+  template). Wired into the Literature Scout dispatch template, agent-roster, modes.md, SKILL.md, and a
+  new `references/web-research.md` (untrusted-data rule, reproducible-evidence contract, native-tool
+  fallback). Files: fetch.py, schemas.py, source-record.yaml, role-dispatch-templates.md,
+  agent-roster.md, modes.md, SKILL.md, web-research.md, README.md.
+- **R32 [M] Code Review mode.** Reuses the Round 0→G substrate pointed at a diff with code lenses
+  (correctness/security/performance/reuse/tests/compatibility); proportionate verification, judge
+  coverage, and the Round F checkpoint carry over. New `references/code-review.md`, a Code Review team
+  shape in team-runbook.md, a Code Reviewer dispatch template, and SKILL.md/modes.md/README wiring. No
+  new schema — a code-review finding is a `Finding` (depth=bug-vs-style, contestability=reproduces-vs-
+  subtle). Files: code-review.md, team-runbook.md, role-dispatch-templates.md, SKILL.md, modes.md,
+  README.md.
+
+selftest.py now runs 6 negative controls; `fetch.py --selftest` covers the fetch/cache/hash path.

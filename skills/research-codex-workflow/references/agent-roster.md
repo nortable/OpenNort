@@ -26,7 +26,7 @@ Orchestrator emits no first-pass finding, critique, or score.
 
 1. **Research Director** - Maintains charter, decision objective, non-goals, success criteria.
 2. **Relevance Arbiter** - Scores decision consequence, information value, redundancy, cost; returns a scored signal (RelevanceScore), never an action.
-3. **Literature Scout** - Retrieves primary sources, contradictory evidence, source metadata. REQUIRES a web/fetch tool; if the runtime has none, this role is a no-op and every external-dependent claim is logged as a `claim_unverified` Completeness gap and in `coverage_log.external_verification_unavailable[]` (see `full-adversarial-workflow.md` "External-evidence honesty") — a local-only run never silently claims an external fact was verified.
+3. **Literature Scout** - Retrieves primary sources, contradictory evidence, source metadata via `scripts/fetch.py <url>` (deterministic fetch + cache + content_sha256 → a `source-record`) or a verified native web tool; see `references/web-research.md`. If neither can reach the network the role is a no-op and every external-dependent claim is logged as a `claim_unverified` Completeness gap and in `coverage_log.external_verification_unavailable[]` (see `full-adversarial-workflow.md` "External-evidence honesty") — a local-only run never silently claims an external fact was verified.
 4. **Data Auditor** - Checks datasets, splits, denominators, labels, leakage, sample definitions.
 5. **Baseline Auditor** - Checks baseline fairness, feasibility, protocol alignment, missing controls.
 6. **Claim Auditor** - Compares report or paper claims to inspectable evidence.

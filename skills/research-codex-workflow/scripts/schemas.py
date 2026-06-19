@@ -289,6 +289,20 @@ SCHEMAS: dict[str, dict[str, Any]] = {
         },
         enums={"loop_guard_action": LOOP_GUARD_ACTION},
     ),
+    # ---- Literature Scout retrieval (R28 web) ----
+    # Emitted by scripts/fetch.py; gives an external source a reproducible, tamper-evident identity
+    # (url + retrieval_date + content_sha256) so a web-backed claim is real evidence, not model prose.
+    "source-record": _schema(
+        required={"source_id", "retrieval_date", "content_sha256", "status"},
+        optional={
+            "http_status", "content_bytes", "cache_path", "support_location", "source_quality",
+            "title", "agent_id", "error",
+        },
+        enums={
+            "status": frozenset({"fetched", "cached", "error", "unavailable"}),
+            "source_quality": frozenset({"high", "medium", "low", "unknown"}),
+        },
+    ),
     # ---- Round G / planning ----
     "experiment-card": _schema(
         required={
@@ -348,6 +362,7 @@ TEMPLATE_SCHEMA_MAP: dict[str, str] = {
     "progress-snapshot.yaml": "progress-snapshot",
     "user-checkpoint.yaml": "user-checkpoint",
     "round-summary.yaml": "round-summary",
+    "source-record.yaml": "source-record",
 }
 
 
