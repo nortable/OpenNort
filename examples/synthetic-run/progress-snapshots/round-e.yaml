@@ -1,0 +1,20 @@
+{
+  "round": "E",
+  "accepted_new_evidence_count": 1,
+  "resolved_critical_contradictions": 1,
+  "unresolved_high_impact_contradictions": 1,
+  "decision_readiness_delta": 0.5,
+  "new_primary_sources": 0,
+  "new_reproducible_artifacts": 1,
+  "repeated_task_signatures": [
+    "rerun_same_doc_grep_without_new_target",
+    "rerun_same_doc_grep_without_new_target"
+  ],
+  "repair_count_by_artifact": {},
+  "cost_or_budget_delta": 0,
+  "scope_drift": "low",
+  "loop_guard_action": "HUMAN_REVIEW",
+  "specific_next_evidence_target": "user decision for contested protocol",
+  "seen_claim_count": 3,
+  "consecutive_dry_rounds": 1
+}

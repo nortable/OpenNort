@@ -1,0 +1,9 @@
+{
+  "run_id": "synthetic-v2-complete-team",
+  "run_root": "~/.codex/research-workflow-runs/synthetic-v2-complete-team",
+  "accepted_blockers": 1,
+  "rejected_or_unsupported": 2,
+  "needs_user_decision": 1,
+  "loop_guard_action": "HUMAN_REVIEW",
+  "protected_files_not_edited": true
+}

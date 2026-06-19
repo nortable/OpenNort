@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+
+# Transient run workspaces
+.research-workflow/
+runs/
+
+# Secrets / runtime — never commit
+auth.json
+config.toml
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.pem
+*.key
+.env
+
+# OS
+.DS_Store

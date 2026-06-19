@@ -1,0 +1,19 @@
+{
+  "packet_id": "P-F-VALID-BLOCKER-1",
+  "source_claim_ids": [
+    "F-VALID-BLOCKER-1"
+  ],
+  "accepted_evidence_ids": [
+    "E-F-VALID-BLOCKER-1"
+  ],
+  "claim": "Documented split policy conflicts with an authoritative preregistration.",
+  "claim_type": "observation",
+  "decision_relevance": "must choose which protocol is authoritative before editing docs",
+  "counterevidence": [],
+  "support_status": "accepted",
+  "evidence_quality": "high",
+  "hard_gate_failures": [],
+  "excluded_unsupported_text": [
+    "C-UNSUPPORTED-1"
+  ]
+}

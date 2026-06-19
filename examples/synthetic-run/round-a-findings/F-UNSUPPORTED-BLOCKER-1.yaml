@@ -1,0 +1,13 @@
+{
+  "finding_id": "F-UNSUPPORTED-BLOCKER-1",
+  "agent_id": "A-SCOUT-1",
+  "role": "Synthetic Scout",
+  "claim": "A baseline is certainly leaking labels.",
+  "claim_type": "observation",
+  "provisional_severity": "blocker",
+  "affected_decision": "would matter if true",
+  "evidence": [],
+  "counterevidence": [],
+  "uncertainty": "synthetic fixture",
+  "validity_verdict": "insufficient"
+}

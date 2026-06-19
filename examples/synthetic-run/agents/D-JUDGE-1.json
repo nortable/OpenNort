@@ -1,0 +1,10 @@
+{
+  "agent_id": "D-JUDGE-1",
+  "role": "Judge",
+  "round": "D",
+  "dispatch_kind": "barrier",
+  "status": "completed",
+  "output_artifact_path": "round-d-judge-scores/",
+  "schema_validated": true,
+  "redispatch_count": 0
+}

@@ -1,0 +1,13 @@
+{
+  "packet_id": "",
+  "source_claim_ids": [],
+  "accepted_evidence_ids": [],
+  "claim": "",
+  "claim_type": "observation",
+  "decision_relevance": "",
+  "counterevidence": [],
+  "support_status": "accepted",
+  "evidence_quality": "medium",
+  "hard_gate_failures": [],
+  "excluded_unsupported_text": []
+}

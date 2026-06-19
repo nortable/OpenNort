@@ -1,0 +1,13 @@
+{
+  "critique_id": "",
+  "agent_id": "",
+  "target_finding_id": "",
+  "attack_type": "evidence_gap",
+  "critique_claim": "",
+  "evidence": [],
+  "minimal_test_to_resolve": "",
+  "expected_decision_impact": "",
+  "verdict": "unsupported_attack",
+  "refute_disposition": "uncertain",
+  "lens": ""
+}

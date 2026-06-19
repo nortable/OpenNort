@@ -1,0 +1,150 @@
+{
+  "run_id": "synthetic-v2-complete-team",
+  "dispatches": [
+    {
+      "role": "Synthetic Scout",
+      "objective": "emit seeded findings",
+      "scope": "fixture",
+      "non_goals": [],
+      "inputs": [
+        "~/.codex/skills/research-codex-workflow/examples/synthetic-adversarial-case.yaml"
+      ],
+      "required_evidence": [
+        "fixture evidence"
+      ],
+      "required_output_schema": "Finding",
+      "permissions": "read-only",
+      "files_owned": [],
+      "files_forbidden": [
+        "*"
+      ],
+      "validation": "validate_artifacts.py",
+      "stop_conditions": [
+        "Round F"
+      ]
+    },
+    {
+      "role": "Falsifier",
+      "objective": "attack anonymized findings",
+      "scope": "fixture",
+      "non_goals": [],
+      "inputs": [
+        "round-a-findings"
+      ],
+      "required_evidence": [
+        "evidence or minimal test"
+      ],
+      "required_output_schema": "Critique",
+      "permissions": "read-only",
+      "files_owned": [],
+      "files_forbidden": [
+        "*"
+      ],
+      "validation": "Evidence Tribunal",
+      "stop_conditions": [
+        "unsupported critique downgraded"
+      ]
+    },
+    {
+      "role": "Evidence Auditor",
+      "objective": "accept or downgrade findings and critiques",
+      "scope": "fixture",
+      "non_goals": [],
+      "inputs": [
+        "round-a-findings",
+        "round-b-critiques"
+      ],
+      "required_evidence": [
+        "inspectable evidence"
+      ],
+      "required_output_schema": "EvidenceDecision",
+      "permissions": "read-only",
+      "files_owned": [],
+      "files_forbidden": [
+        "*"
+      ],
+      "validation": "hard gate",
+      "stop_conditions": [
+        "unsupported claims excluded from judge packets"
+      ]
+    },
+    {
+      "role": "Judge",
+      "objective": "score accepted evidence packets",
+      "scope": "fixture",
+      "non_goals": [
+        "invent evidence"
+      ],
+      "inputs": [
+        "evidence-packets"
+      ],
+      "required_evidence": [
+        "accepted evidence only"
+      ],
+      "required_output_schema": "JudgeScore",
+      "permissions": "read-only",
+      "files_owned": [],
+      "files_forbidden": [
+        "*"
+      ],
+      "validation": "decision ledger",
+      "stop_conditions": [
+        "Round E"
+      ]
+    }
+  ],
+  "dispatch_groups": [
+    {
+      "group_id": "A",
+      "round": "A",
+      "dispatch_kind": "barrier",
+      "members": [
+        "Synthetic Scout"
+      ],
+      "next_group": "B",
+      "barrier_reason": "collect all first-pass findings before anonymization and dedup"
+    },
+    {
+      "group_id": "B",
+      "round": "B",
+      "dispatch_kind": "pipeline",
+      "members": [
+        "Falsifier"
+      ],
+      "next_group": "C",
+      "barrier_reason": ""
+    },
+    {
+      "group_id": "C",
+      "round": "C",
+      "dispatch_kind": "pipeline",
+      "members": [
+        "Evidence Auditor"
+      ],
+      "next_group": "D",
+      "barrier_reason": ""
+    },
+    {
+      "group_id": "D",
+      "round": "D",
+      "dispatch_kind": "barrier",
+      "members": [
+        "Judge"
+      ],
+      "next_group": "E",
+      "barrier_reason": "panel synthesis needs every judge score together"
+    }
+  ],
+  "_doc": "dispatch_kind: barrier = wait_agent on ALL members before the next group; pipeline = stream each finding to the next stage as it lands (A->B->C). Orchestrator owns group sequencing.",
+  "budget_tier": "standard",
+  "agent_count_backstop": 18,
+  "stop_rule": {
+    "max_rounds": 8,
+    "loop_until_dry_K": 2,
+    "token_budget_target": null,
+    "dedup_against": "all_seen"
+  },
+  "max_concurrent_subagents": 12,
+  "max_subagent_depth": 1,
+  "fallback_if_subagents_unavailable": "sequential artifact-producing passes"
+}

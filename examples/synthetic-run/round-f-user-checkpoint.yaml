@@ -1,0 +1,22 @@
+{
+  "checkpoints": [
+    {
+      "decision_id": "D1",
+      "decision_required": "Choose authoritative evaluation protocol before doc edits.",
+      "why_it_matters": "The workflow must not silently resolve project-owner protocol choices.",
+      "recommended_option": "Require user approval before contested edits.",
+      "alternatives": [
+        "defer edits",
+        "revise protocol",
+        "archive unsupported claim"
+      ],
+      "evidence_ids": [
+        "E-F-VALID-BLOCKER-1"
+      ],
+      "files_or_runs_affected": [],
+      "consequence_of_no_decision": "Stop at Round F; no protected edits."
+    }
+  ],
+  "stop_round": "F",
+  "edit_permission_before_approval": false
+}

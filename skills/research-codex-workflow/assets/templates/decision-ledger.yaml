@@ -1,0 +1,16 @@
+{
+  "decisions": [
+    {
+      "issue_id": "",
+      "title": "",
+      "decision_class": "rejected_or_unsupported",
+      "action": "PARK",
+      "evidence_ids": [],
+      "affected_files": [],
+      "recommended_change": "",
+      "alternatives": [],
+      "user_decision_needed": false,
+      "edit_after_approval": false
+    }
+  ]
+}

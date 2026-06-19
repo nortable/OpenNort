@@ -1,0 +1,16 @@
+{
+  "checkpoints": [
+    {
+      "decision_id": "",
+      "decision_required": "",
+      "why_it_matters": "",
+      "recommended_option": "",
+      "alternatives": [],
+      "evidence_ids": [],
+      "files_or_runs_affected": [],
+      "consequence_of_no_decision": ""
+    }
+  ],
+  "stop_round": "F",
+  "edit_permission_before_approval": false
+}

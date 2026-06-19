@@ -1,0 +1,20 @@
+{
+  "finding_id": "F-VALID-BLOCKER-1",
+  "agent_id": "A-SCOUT-1",
+  "role": "Synthetic Scout",
+  "claim": "Documented split policy conflicts with an authoritative preregistration.",
+  "claim_type": "observation",
+  "provisional_severity": "blocker",
+  "affected_decision": "must choose which protocol is authoritative before editing docs",
+  "evidence": [
+    {
+      "file_path": "evaluation/preregistration.md",
+      "line_or_symbol": "split policy",
+      "command": "rg -n \"fixed|5-fold|80/20\" evaluation docs .claude/plans",
+      "output_summary": "conflicting split terms detected"
+    }
+  ],
+  "counterevidence": [],
+  "uncertainty": "synthetic fixture",
+  "validity_verdict": "sufficient"
+}

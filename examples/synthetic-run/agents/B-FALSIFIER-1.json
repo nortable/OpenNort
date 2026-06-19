@@ -1,0 +1,10 @@
+{
+  "agent_id": "B-FALSIFIER-1",
+  "role": "Falsifier",
+  "round": "B",
+  "dispatch_kind": "pipeline",
+  "status": "completed",
+  "output_artifact_path": "round-b-critiques/C-UNSUPPORTED-1.yaml",
+  "schema_validated": true,
+  "redispatch_count": 0
+}

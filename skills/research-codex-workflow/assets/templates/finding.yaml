@@ -1,0 +1,25 @@
+{
+  "finding_id": "",
+  "agent_id": "",
+  "role": "",
+  "claim": "",
+  "claim_type": "observation",
+  "provisional_severity": "warning",
+  "affected_decision": "",
+  "evidence": [
+    {
+      "file_path": null,
+      "line_or_symbol": null,
+      "command": null,
+      "output_summary": null,
+      "statistic_or_observation": null,
+      "source_identifier": null,
+      "retrieval_date": null,
+      "artifact_path": null,
+      "artifact_hash": null
+    }
+  ],
+  "counterevidence": [],
+  "uncertainty": "",
+  "validity_verdict": null
+}

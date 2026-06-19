@@ -1,0 +1,65 @@
+{
+  "decisions": [
+    {
+      "issue_id": "I-F-IRRELEVANT-1",
+      "title": "The repository has a historical note with an old date.",
+      "decision_class": "rejected_or_unsupported",
+      "action": "PARK",
+      "evidence_ids": [
+        "E-F-IRRELEVANT-1"
+      ],
+      "affected_files": [
+        "docs/history.md"
+      ],
+      "recommended_change": "act only after evidence audit and user checkpoint",
+      "alternatives": [],
+      "user_decision_needed": false,
+      "edit_after_approval": false
+    },
+    {
+      "issue_id": "I-F-UNSUPPORTED-BLOCKER-1",
+      "title": "A baseline is certainly leaking labels.",
+      "decision_class": "rejected_or_unsupported",
+      "action": "HUMAN_REVIEW",
+      "evidence_ids": [],
+      "affected_files": [],
+      "recommended_change": "act only after evidence audit and user checkpoint",
+      "alternatives": [],
+      "user_decision_needed": false,
+      "edit_after_approval": false
+    },
+    {
+      "issue_id": "I-F-VALID-BLOCKER-1",
+      "title": "Documented split policy conflicts with an authoritative preregistration.",
+      "decision_class": "accepted_blocker",
+      "action": "HUMAN_REVIEW",
+      "evidence_ids": [
+        "E-F-VALID-BLOCKER-1"
+      ],
+      "affected_files": [
+        "evaluation/preregistration.md"
+      ],
+      "recommended_change": "act only after evidence audit and user checkpoint",
+      "alternatives": [],
+      "user_decision_needed": false,
+      "edit_after_approval": true
+    },
+    {
+      "issue_id": "I-ROUND-F-CHECKPOINT",
+      "title": "Choose authoritative evaluation protocol before doc edits.",
+      "decision_class": "needs_user_decision",
+      "action": "HUMAN_REVIEW",
+      "evidence_ids": [
+        "E-F-VALID-BLOCKER-1"
+      ],
+      "affected_files": [],
+      "recommended_change": "Stop at Round F before contested edits.",
+      "alternatives": [
+        "choose protocol A",
+        "choose protocol B"
+      ],
+      "user_decision_needed": true,
+      "edit_after_approval": true
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "run_id": "synthetic-v2-complete-team",
+  "objective": "Validate the full adversarial workflow on a deterministic synthetic case.",
+  "decision_to_support": "Can the Codex skill separate evidence-backed blockers from unsupported claims and user-owned choices?",
+  "decision_owner": "user",
+  "scope": "offline fixture only",
+  "non_goals": [
+    "paid APIs",
+    "project file edits",
+    "standalone CLI product"
+  ],
+  "success_criteria": [
+    "irrelevant_finding_parked",
+    "unsupported_blocker_downgraded",
+    "evidenced_blocker_accepted",
+    "unsupported_critique_rejected",
+    "loop_guard_triggered",
+    "round_f_checkpoint_created",
+    "overlapping_parallel_writes_prevented",
+    "paid_api_required"
+  ],
+  "known_high_risk_choices": [
+    "contested protocol choice",
+    "parallel writer collision"
+  ],
+  "likely_affected_files": [],
+  "required_evidence": [
+    "file path",
+    "command",
+    "statistic",
+    "artifact"
+  ],
+  "budget_or_cost_constraints": "offline only",
+  "user_checkpoint_required": "yes",
+  "edit_permission_before_checkpoint": "no"
+}

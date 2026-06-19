@@ -1,0 +1,39 @@
+{
+  "experiment_id": "",
+  "version": 1,
+  "decision_link": {
+    "if_positive": "",
+    "if_negative": "",
+    "if_null": ""
+  },
+  "research_question": "",
+  "primary_hypothesis": "",
+  "null_hypothesis": "",
+  "alternative_hypotheses": [],
+  "falsification_condition": "",
+  "minimal_discriminating_test": "",
+  "dataset_or_sample_definition": "",
+  "inclusion_exclusion_rules": "",
+  "split_or_sampling_protocol": "",
+  "controls_and_baselines": [],
+  "primary_metric": "",
+  "secondary_metrics": [],
+  "success_threshold": "",
+  "failure_threshold": "",
+  "equivalence_or_inconclusive_rule": "",
+  "random_seeds_or_repetitions": [],
+  "known_confounders": [],
+  "resource_limits": "",
+  "stop_conditions": [],
+  "exact_run_command_or_runner": "",
+  "expected_artifacts": [],
+  "interpretation_table": {
+    "positive": "",
+    "negative": "",
+    "null": "",
+    "failed_run": ""
+  },
+  "downstream_decision_for_each_outcome": "",
+  "approved_by": [],
+  "spec_hash": ""
+}

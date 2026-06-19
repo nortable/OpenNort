@@ -1,0 +1,32 @@
+{
+  "run_id": "",
+  "dispatches": [
+    {
+      "role": "",
+      "objective": "",
+      "scope": "",
+      "non_goals": [],
+      "inputs": [],
+      "required_evidence": [],
+      "required_output_schema": "",
+      "permissions": "read-only",
+      "files_owned": [],
+      "files_forbidden": [],
+      "validation": "",
+      "stop_conditions": []
+    }
+  ],
+  "dispatch_groups": [
+    {"group_id": "A", "round": "A", "dispatch_kind": "barrier", "members": [], "next_group": "B", "barrier_reason": "collect all first-pass findings before anonymization and dedup", "fanout_min": 3, "fanout_max": 6, "fanout_chosen": 4, "fanout_justification": "audit roster for a documentation/claim audit"},
+    {"group_id": "B", "round": "B", "dispatch_kind": "pipeline", "members": [], "next_group": "C", "barrier_reason": "", "fanout_min": 2, "fanout_max": 4, "fanout_chosen": 3, "fanout_justification": "perspective-diverse refuters"},
+    {"group_id": "C", "round": "C", "dispatch_kind": "pipeline", "members": [], "next_group": "D", "barrier_reason": "", "fanout_min": 1, "fanout_max": 2, "fanout_chosen": 1, "fanout_justification": "one evidence auditor, second for high-impact"},
+    {"group_id": "D", "round": "D", "dispatch_kind": "barrier", "members": [], "next_group": "E", "barrier_reason": "panel synthesis needs every judge score together", "fanout_min": 2, "fanout_max": 3, "fanout_chosen": 2, "fanout_justification": "independent judge passes"}
+  ],
+  "_doc": "dispatch_kind: barrier = wait_agent on ALL members before the next group (Round A before anonymization/dedup; Round D before panel synthesis). pipeline = stream each item to the next stage as it lands (Round A->B->C per finding). The Orchestrator owns group sequencing; workers never advance a group. fanout_chosen never exceeds max_concurrent_subagents or the budget_tier ceiling.",
+  "budget_tier": "deep",
+  "agent_count_backstop": 18,
+  "stop_rule": {"max_rounds": 8, "loop_until_dry_K": 2, "token_budget_target": null, "dedup_against": "all_seen"},
+  "max_concurrent_subagents": 12,
+  "max_subagent_depth": 1,
+  "fallback_if_subagents_unavailable": "sequential artifact-producing passes"
+}

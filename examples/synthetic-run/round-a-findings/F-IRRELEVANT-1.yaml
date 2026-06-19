@@ -1,0 +1,20 @@
+{
+  "finding_id": "F-IRRELEVANT-1",
+  "agent_id": "A-SCOUT-1",
+  "role": "Synthetic Scout",
+  "claim": "The repository has a historical note with an old date.",
+  "claim_type": "observation",
+  "provisional_severity": "warning",
+  "affected_decision": "none",
+  "evidence": [
+    {
+      "file_path": "docs/history.md",
+      "line_or_symbol": "historical note",
+      "command": "rg -n \"historical note|old date\" docs",
+      "output_summary": "historical note found"
+    }
+  ],
+  "counterevidence": [],
+  "uncertainty": "synthetic fixture",
+  "validity_verdict": "sufficient"
+}

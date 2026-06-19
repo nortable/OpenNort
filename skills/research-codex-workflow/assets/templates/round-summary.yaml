@@ -1,0 +1,25 @@
+{
+  "run_id": "",
+  "round": "",
+  "roles_used": [],
+  "artifacts_created": [],
+  "accepted_evidence_count": 0,
+  "downgraded_claim_count": 0,
+  "decision_classes": {
+    "accepted_blocker": 0,
+    "accepted_non_blocking": 0,
+    "rejected_or_unsupported": 0,
+    "needs_user_decision": 0
+  },
+  "loop_guard_action": "CONTINUE",
+  "next_round": "",
+  "stop_reason": null,
+  "coverage_log": {
+    "findings_deduped_against_seen": 0,
+    "findings_killed_by_majority_refute": 0,
+    "items_truncated_or_sampled": [],
+    "lenses_or_sources_not_run": [],
+    "concurrency_cap_hit": false,
+    "ran_as_sequential_fallback": false
+  }
+}

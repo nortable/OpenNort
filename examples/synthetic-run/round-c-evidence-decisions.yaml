@@ -1,0 +1,48 @@
+{
+  "decisions": [
+    {
+      "claim_or_critique_id": "F-IRRELEVANT-1",
+      "agent_id": "C-AUDITOR-1",
+      "support_status": "accepted",
+      "evidence_quality": "medium",
+      "accepted_evidence_ids": [
+        "E-F-IRRELEVANT-1"
+      ],
+      "required_followup": "none",
+      "downgraded_severity": "info",
+      "reason": "True but no decision consequence; park instead of spending research budget."
+    },
+    {
+      "claim_or_critique_id": "F-UNSUPPORTED-BLOCKER-1",
+      "agent_id": "C-AUDITOR-1",
+      "support_status": "needs_evidence",
+      "evidence_quality": "none",
+      "accepted_evidence_ids": [],
+      "required_followup": "attach file path, command, statistic, source, or artifact",
+      "downgraded_severity": "unsupported",
+      "reason": "Plausible prose is not evidence."
+    },
+    {
+      "claim_or_critique_id": "F-VALID-BLOCKER-1",
+      "agent_id": "C-AUDITOR-1",
+      "support_status": "accepted",
+      "evidence_quality": "high",
+      "accepted_evidence_ids": [
+        "E-F-VALID-BLOCKER-1"
+      ],
+      "required_followup": "Round F user decision before contested edits",
+      "downgraded_severity": "blocker",
+      "reason": "Claim has inspectable file/command evidence and affects the protocol decision."
+    },
+    {
+      "claim_or_critique_id": "C-UNSUPPORTED-1",
+      "agent_id": "C-AUDITOR-1",
+      "support_status": "unsupported",
+      "evidence_quality": "none",
+      "accepted_evidence_ids": [],
+      "required_followup": "provide evidence or a resolvable test",
+      "downgraded_severity": "unsupported",
+      "reason": "Rhetorical attack has no inspectable evidence."
+    }
+  ]
+}

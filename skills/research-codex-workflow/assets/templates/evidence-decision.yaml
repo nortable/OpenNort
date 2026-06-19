@@ -1,0 +1,10 @@
+{
+  "claim_or_critique_id": "",
+  "agent_id": "",
+  "support_status": "needs_evidence",
+  "evidence_quality": "none",
+  "accepted_evidence_ids": [],
+  "required_followup": "",
+  "downgraded_severity": "unsupported",
+  "reason": ""
+}

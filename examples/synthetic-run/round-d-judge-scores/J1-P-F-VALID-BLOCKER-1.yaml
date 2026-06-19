@@ -1,0 +1,16 @@
+{
+  "packet_id": "P-F-VALID-BLOCKER-1",
+  "judge_id": "J1",
+  "agent_id": "D-JUDGE-1",
+  "blocker_score": 5,
+  "warning_score": 1,
+  "false_positive_risk": 1,
+  "decision_relevance": 5,
+  "evidence_quality": 5,
+  "technical_validity": 5,
+  "methodological_validity": 4,
+  "reproducibility": 4,
+  "final_class": "accepted_blocker",
+  "hard_gate_failures": [],
+  "rationale": "Accepted evidence supports a blocker and unsupported critique was excluded."
+}

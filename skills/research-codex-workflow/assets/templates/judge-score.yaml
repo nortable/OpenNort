@@ -1,0 +1,16 @@
+{
+  "packet_id": "",
+  "judge_id": "",
+  "agent_id": "",
+  "blocker_score": 0,
+  "warning_score": 0,
+  "false_positive_risk": 0,
+  "decision_relevance": 0,
+  "evidence_quality": 0,
+  "technical_validity": 0,
+  "methodological_validity": 0,
+  "reproducibility": 0,
+  "final_class": "rejected_or_unsupported",
+  "hard_gate_failures": [],
+  "rationale": ""
+}

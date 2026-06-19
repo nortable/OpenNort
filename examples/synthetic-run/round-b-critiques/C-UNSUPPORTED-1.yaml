@@ -1,0 +1,13 @@
+{
+  "critique_id": "C-UNSUPPORTED-1",
+  "agent_id": "B-FALSIFIER-1",
+  "target_finding_id": "F-VALID-BLOCKER-1",
+  "attack_type": "irrelevant",
+  "critique_claim": "This conflict probably does not matter because reviewers will ignore it.",
+  "evidence": [],
+  "minimal_test_to_resolve": "provide reviewer decision evidence",
+  "expected_decision_impact": "none without evidence",
+  "verdict": "unsupported_attack",
+  "refute_disposition": "not_refuted",
+  "lens": "decision-impact"
+}

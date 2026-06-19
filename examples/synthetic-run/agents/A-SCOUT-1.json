@@ -1,0 +1,10 @@
+{
+  "agent_id": "A-SCOUT-1",
+  "role": "Synthetic Scout",
+  "round": "A",
+  "dispatch_kind": "barrier",
+  "status": "completed",
+  "output_artifact_path": "round-a-findings/",
+  "schema_validated": true,
+  "redispatch_count": 0
+}

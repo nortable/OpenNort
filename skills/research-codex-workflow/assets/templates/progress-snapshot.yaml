@@ -1,0 +1,17 @@
+{
+  "round": "",
+  "accepted_new_evidence_count": 0,
+  "resolved_critical_contradictions": 0,
+  "unresolved_high_impact_contradictions": 0,
+  "decision_readiness_delta": 0.0,
+  "new_primary_sources": 0,
+  "new_reproducible_artifacts": 0,
+  "repeated_task_signatures": [],
+  "repair_count_by_artifact": {},
+  "cost_or_budget_delta": null,
+  "scope_drift": "low",
+  "loop_guard_action": "CONTINUE",
+  "specific_next_evidence_target": null,
+  "seen_claim_count": 0,
+  "consecutive_dry_rounds": 0
+}

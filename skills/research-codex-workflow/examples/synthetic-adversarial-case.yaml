@@ -1,0 +1,101 @@
+{
+  "run_id": "synthetic-v2",
+  "description": "Offline deterministic fixture for the orchestrator-mediated adversarial workflow.",
+  "round_a_findings": [
+    {
+      "finding_id": "F-IRRELEVANT-1",
+      "seeded_case": "true_but_decision_irrelevant",
+      "claim": "The repository has a historical note with an old date.",
+      "decision_consequence": "none",
+      "evidence_present": true,
+      "evidence": [
+        {
+          "file_path": "docs/history.md",
+          "line_or_symbol": "historical note",
+          "command": "rg -n \"historical note|old date\" docs",
+          "output_summary": "historical note found"
+        }
+      ],
+      "expected_decision_class": "rejected_or_unsupported",
+      "expected_action": "PARK"
+    },
+    {
+      "finding_id": "F-UNSUPPORTED-BLOCKER-1",
+      "seeded_case": "plausible_blocker_without_inspectable_evidence",
+      "claim": "A baseline is certainly leaking labels.",
+      "decision_consequence": "would matter if true",
+      "evidence_present": false,
+      "expected_support_status": "needs_evidence",
+      "expected_decision_class": "rejected_or_unsupported"
+    },
+    {
+      "finding_id": "F-VALID-BLOCKER-1",
+      "seeded_case": "valid_blocker_with_file_or_command_evidence",
+      "claim": "Documented split policy conflicts with an authoritative preregistration.",
+      "decision_consequence": "must choose which protocol is authoritative before editing docs",
+      "evidence_present": true,
+      "evidence": [
+        {
+          "file_path": "evaluation/preregistration.md",
+          "line_or_symbol": "split policy",
+          "command": "rg -n \"fixed|5-fold|80/20\" evaluation docs .claude/plans",
+          "output_summary": "conflicting split terms detected"
+        }
+      ],
+      "expected_support_status": "accepted",
+      "expected_decision_class": "accepted_blocker"
+    }
+  ],
+  "round_b_critiques": [
+    {
+      "critique_id": "C-UNSUPPORTED-1",
+      "target_finding_id": "F-VALID-BLOCKER-1",
+      "seeded_case": "rhetorically_strong_but_unsupported_critique",
+      "critique_claim": "This conflict probably does not matter because reviewers will ignore it.",
+      "evidence_present": false,
+      "expected_verdict": "unsupported_attack",
+      "expected_support_status": "unsupported"
+    }
+  ],
+  "loop_guard_fixture": {
+    "seeded_case": "repeated_noop_repair_or_experiment",
+    "repeated_task_signatures": [
+      "rerun_same_doc_grep_without_new_target",
+      "rerun_same_doc_grep_without_new_target"
+    ],
+    "decision_readiness_delta": 0.0,
+    "expected_loop_guard_action": "HUMAN_REVIEW"
+  },
+  "round_f_checkpoint": {
+    "seeded_case": "contested_protocol_choice",
+    "decision_required": "Choose authoritative evaluation protocol before doc edits.",
+    "expected_decision_class": "needs_user_decision",
+    "expected_stop_round": "F"
+  },
+  "worker_ownership_fixture": {
+    "seeded_case": "two_write_tasks_that_would_collide",
+    "write_tasks": [
+      {
+        "worker_id": "W1",
+        "owns": ["docs/evaluation.md"],
+        "must_not_edit": ["docs/evaluation.md"]
+      },
+      {
+        "worker_id": "W2",
+        "owns": ["docs/evaluation.md"],
+        "must_not_edit": ["docs/evaluation.md"]
+      }
+    ],
+    "expected_parallel_write_allowed": false
+  },
+  "expected_summary": {
+    "irrelevant_finding_parked": true,
+    "unsupported_blocker_downgraded": true,
+    "evidenced_blocker_accepted": true,
+    "unsupported_critique_rejected": true,
+    "loop_guard_triggered": true,
+    "round_f_checkpoint_created": true,
+    "overlapping_parallel_writes_prevented": true,
+    "paid_api_required": false
+  }
+}

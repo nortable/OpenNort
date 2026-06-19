@@ -1,0 +1,15 @@
+{
+  "run_id": "",
+  "objective": "",
+  "decision_to_support": "",
+  "decision_owner": "",
+  "scope": "",
+  "non_goals": [],
+  "success_criteria": [],
+  "known_high_risk_choices": [],
+  "likely_affected_files": [],
+  "required_evidence": [],
+  "budget_or_cost_constraints": "",
+  "user_checkpoint_required": "unknown",
+  "edit_permission_before_checkpoint": "no"
+}

@@ -1,0 +1,10 @@
+{
+  "agent_id": "C-AUDITOR-1",
+  "role": "Evidence Auditor",
+  "round": "C",
+  "dispatch_kind": "pipeline",
+  "status": "completed",
+  "output_artifact_path": "round-c-evidence-decisions.yaml",
+  "schema_validated": true,
+  "redispatch_count": 0
+}
