@@ -55,6 +55,11 @@ def finding_artifact(raw: dict[str, Any]) -> dict[str, Any]:
         "counterevidence": [],
         "uncertainty": "synthetic fixture",
         "validity_verdict": "sufficient" if raw.get("evidence_present") else "insufficient",
+        # R26: worker self-assessment that drives proportionate verification routing. The evidenced
+        # blocker is a deep, more-contestable claim (gets the adversarial route); the rest are surface,
+        # low-contestability facts that need only a light confirmation pass.
+        "depth": "deep" if raw.get("evidence_present") else "surface",
+        "contestability": "medium" if raw.get("evidence_present") else "low",
     }
 
 

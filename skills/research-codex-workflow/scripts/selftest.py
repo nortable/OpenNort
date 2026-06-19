@@ -65,11 +65,24 @@ def edit_before_approval(run_root: Path) -> None:
            lambda d: d.__setitem__("edit_permission_before_approval", True))
 
 
+def unjudged_packet(run_root: Path) -> None:
+    """Assemble a second, valid evidence packet (traceable to the accepted finding) but give it NO
+    judge score. validate_judge_coverage must reject the run — no silent promotion of unjudged
+    evidence."""
+    src = run_root / "evidence-packets" / "P-F-VALID-BLOCKER-1.yaml"
+    data = json.loads(src.read_text(encoding="utf-8"))
+    data["packet_id"] = "P-UNJUDGED-1"
+    (run_root / "evidence-packets" / "P-UNJUDGED-1.yaml").write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+
 NEGATIVE_CONTROLS = [
     ("dropped required key", drop_required_key),
     ("dangling evidence_id", dangling_evidence_id),
     ("anonymization leak (author identity in a critique)", anonymization_leak),
     ("edit_permission_before_approval = True", edit_before_approval),
+    ("evidence packet with no judge score", unjudged_packet),
 ]
 
 
@@ -97,7 +110,7 @@ def main() -> int:
             print(f"FAIL: {f}", file=sys.stderr)
         return 1
     print("OK: self-test passed — clean run validates and all negative controls are rejected "
-          "(schema + references + anonymization + checkpoint enforced)")
+          "(schema + references + anonymization + checkpoint + judge-coverage enforced)")
     return 0
 
 

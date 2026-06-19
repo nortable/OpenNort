@@ -189,3 +189,36 @@ roles stay read-only; human stays in the loop at checkpoints.
 ## Rejected (not carried): partial-panel-may-not-decide clause (contradicts budget-exhaustion rule);
 no-op agent_role check on evidence-packet; "two divergent enums in one field" mischaracterization;
 fabricated FANOUT_RANGE['G']; single generic int bound. See run wf_e0057248-1fd output for detail.
+
+## Iteration 2 — depth & proportionality (from a head-to-head against a Claude Code Workflow run)
+
+A live A/B on the same documentation audit (this harness vs a discovery-heavy, contestability-routed
+Claude Code Workflow) exposed three gaps: the run caught surface doc-vs-tree drift exhaustively but
+produced zero design/statistical-validity insight; it applied a flat 3-lens falsifier panel to binary
+file-exists facts (12 critiques, 0 overturned — "keeps judging"); and Round D scored only 1 of 4
+assembled packets while Round E promoted all 4. Carried items:
+
+- **R26 [M] Proportionate verification & deep-insight discovery.** `finding` gains optional
+  `depth` (surface|deep) and `contestability` (low|medium|high); added `DEPTH`, `CONTESTABILITY`,
+  `VERIFICATION_ROUTE` enums. The Orchestrator routes Round B by contestability (light single pass for
+  binary facts; multi-lens panel only for contestable/high-stakes claims). A mandatory deep-insight
+  lens (power/MDE, resampling unit & effective-N, leakage, endpoint definition, confirmatory-vs-
+  exploratory structure) makes the run reach design validity, not only drift. `validate_artifacts.py`
+  adds advisory `validate_proportionate_verification` (warn on >=2 critiques for a low-contestability
+  finding / missing labels) and `validate_discovery_depth` (warn on zero `depth: deep`). Files:
+  schemas.py, validate_artifacts.py, run_synthetic_fixture.py, full-adversarial-workflow.md,
+  team-runbook.md, agent-roster.md, modes.md, SKILL.md, loop-guard.md.
+- **R27 [M] Judge coverage (hard).** `validate_judge_coverage` rejects any run where an assembled
+  evidence packet has no Round D judge score — closes the "judged 1 of N, promoted N" hole. New
+  selftest negative control (`unjudged_packet`). Files: validate_artifacts.py, selftest.py,
+  full-adversarial-workflow.md, team-runbook.md, agent-roster.md.
+- **R28 [S] External-evidence honesty.** Literature Scout requires a web/fetch tool; without one it is
+  a no-op and external-dependent claims (leakage, prior-art, pretraining provenance) are logged in
+  `coverage_log.external_verification_unavailable[]` / as `claim_unverified` gaps, never passed off as
+  locally verified. Canonical `coverage_log` field list added to loop-guard.md. Files:
+  full-adversarial-workflow.md, agent-roster.md, modes.md, loop-guard.md, SKILL.md.
+- **Fix.** agent-roster.md said the validator checks `max_subagent_depth==2`; the code enforces `==1`.
+  Reconciled to `==1`.
+
+Re-run `scripts/selftest.py` (now 5 negative controls) and `--run-root examples/synthetic-run` after
+this batch; the committed run carries depth/contestability so `--run-root` stays warning-free.

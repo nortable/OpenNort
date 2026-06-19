@@ -80,8 +80,13 @@ Behavior:
 - load `full-adversarial-workflow.md`;
 - run Round 0 through Round F, and Round G only after approval;
 - isolate first-pass findings;
+- run the deep-insight lens so discovery reaches design/statistical validity, not only surface drift;
+- route verification by contestability (light pass for binary facts, adversarial panel for contestable
+  claims) — do not flat-falsify every finding;
 - anonymize findings before falsification and judging;
-- put evidence audit before judge scoring;
+- put evidence audit before judge scoring; score every assembled packet (no cherry-picking);
+- log external-dependent claims as unverified when no web/fetch tool exists (never claim a local-only
+  run verified an external fact);
 - stop at Round F when a user decision is required;
 - do not edit contested research documents before approval.
 

@@ -9,5 +9,7 @@
   "evidence": [],
   "counterevidence": [],
   "uncertainty": "synthetic fixture",
-  "validity_verdict": "insufficient"
+  "validity_verdict": "insufficient",
+  "depth": "surface",
+  "contestability": "low"
 }

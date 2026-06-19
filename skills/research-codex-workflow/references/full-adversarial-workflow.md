@@ -108,6 +108,16 @@ Typical open research roles:
 Every output uses the Finding contract from `artifact-contracts.md`. Findings are provisional until
 the Evidence Tribunal accepts them.
 
+**Discovery depth (do not stop at surface drift).** Each finder returns MULTIPLE findings, not one,
+and labels every finding with `depth` (`surface` = a doc-vs-tree / number-vs-number / file-exists
+mismatch a grep settles; `deep` = a design, statistical-validity, or scientific-soundness insight that
+requires reasoning about whether the research itself is correct) and `contestability`
+(`low|medium|high`). At least one team member MUST run the **deep-insight lens** — statistical power /
+MDE vs the claimed effect, the resampling unit and effective-N, leakage and pretraining contamination,
+endpoint definition, confirmatory-vs-exploratory structure — so the run does not return only surface
+drift. A discovery pass that produces zero `depth: deep` findings is a coverage gap: log it and
+surface it at Round E.5 (`validate_artifacts.py` warns when no finding is `deep`).
+
 ## Round B - Anonymous Cross-Falsification (Find->Verify pipeline)
 
 Rounds A->B->C form a per-finding **pipeline**: once Round A's barrier releases, each anonymized
@@ -128,12 +138,31 @@ The Orchestrator must:
 
 Unsupported rhetorical attacks remain unsupported.
 
-**Perspective-diverse refuters.** Assign at least three independent refuters per finding, each under a
-distinct lens (e.g. correctness, methodology, decision-impact), each defaulting `refute_disposition`
-to `refuted` when uncertain (recorded with its `lens` in the Critique). A finding that a majority
-refutes is DOWNGRADED and routed INTO the Round C Evidence Tribunal — it is NOT vote-killed before
-evidence adjudication, preserving evidence-before-judging and "unsupported attacks remain unsupported".
-Honor the concurrency cap with top-K or serialized batches, smallest-mode-that-fits.
+**Proportionate verification (route by contestability — do this BEFORE assigning refuters).** Scale
+verification effort to each finding's `contestability`; do not run a flat multi-lens panel on every
+finding. The Orchestrator routes each finding:
+
+- `contestability: low` — a binary doc-vs-tree / number-vs-number / file-exists fact that a single
+  `ls`, `rg`, or command settles → the **light route**: exactly ONE confirmation pass (a single
+  Falsifier, or fold the check straight into the Round C Evidence Auditor). A fact that cannot be
+  argued with does not need three skeptics.
+- `contestability: medium|high`, or any high-stakes blocker whose mis-call is costly (a power,
+  leakage, fairness, endpoint, or methodological judgment) → the **adversarial route**: the full
+  perspective-diverse refuter panel below.
+
+Record each finding's `verification_route` and the light/adversarial split in the round summary
+`coverage_log.verification_route_counts`. The whole point is to move the verification budget OFF binary
+facts and ONTO the few genuinely contestable claims: a 3-lens panel on file-exists findings spends
+agents where nothing can be overturned (the failure mode is "keeps judging" with zero findings
+overturned), while a single pass on a statistical-power claim misses the downgrade.
+
+**Perspective-diverse refuters (adversarial route only).** Assign at least three independent refuters
+per finding, each under a distinct lens (e.g. correctness, methodology, decision-impact), each
+defaulting `refute_disposition` to `refuted` when uncertain (recorded with its `lens` in the Critique).
+A finding that a majority refutes is DOWNGRADED and routed INTO the Round C Evidence Tribunal — it is
+NOT vote-killed before evidence adjudication, preserving evidence-before-judging and "unsupported
+attacks remain unsupported". Honor the concurrency cap with top-K or serialized batches,
+smallest-mode-that-fits.
 
 ## Round C - Evidence Tribunal
 
@@ -163,6 +192,15 @@ Rules:
 - downgrade severity when evidence is weak;
 - mark project-owner policy choices as `needs_user_decision`;
 - do not pass unsupported persuasive text to judges as accepted evidence.
+
+**External-evidence honesty.** Some claims can only be settled against facts OUTSIDE the repo — a
+public dataset's patient list (leakage), a prior-art or SOTA number, a pretraining-corpus provenance.
+The Evidence Auditor accepts the locally inspectable part and returns `needs_evidence` for the external
+part; the Orchestrator records it in `coverage_log.external_verification_unavailable[]` and as a
+`claim_unverified` Completeness gap, rather than letting a local-only check read as fully verified. If
+no web/fetch tool is configured, the Literature Scout is a no-op and EVERY external-dependent claim is
+logged this way — never silently treated as closed. (A pure local audit is legitimate; claiming it
+verified an external fact it could not reach is not.)
 
 ## Round D - Independent Judge Panel
 
@@ -194,11 +232,19 @@ Calibrated language              5
 ### Panel aggregation (Orchestrator-owned)
 
 The canonical hard-gate-first + median rule lives in `team-runbook.md` "Judge Aggregation"; do not
-restate it. The panel adds two master-template elements on top of it:
+restate it. The panel adds three master-template elements on top of it:
 
 - **Perspective-diverse lenses**: give each judge a distinct emphasis lens — decision-impact,
   methodology, reproducibility — over the SAME rubric, with no cross-score visibility. Diverse lenses
   catch failure modes that identical passes miss.
+- **Score every assembled packet (coverage, not cherry-pick)**: each `evidence-packets/*.yaml` the
+  Orchestrator built must receive at least one judge score. A judge may NOT score only "the most
+  decision-critical" packet and leave the rest unscored while Round E still promotes them — that
+  silently rubber-stamps unjudged evidence. With 2-3 judges, split the packets across the panel so
+  every packet is covered (each can still carry its emphasis lens). `validate_artifacts.py` rejects a
+  run where any assembled packet has no Round D score. (Packets are only assembled from accepted /
+  partially_supported Round C decisions, so a Tribunal-rejected claim is never assembled and needs no
+  score.)
 - **Synthesize from the winner**: adopt the highest-scoring accepted pass's `final_class` and
   rationale as the spine, then GRAFT any blocker, counterevidence, or `hard_gate_failures` entry a
   runner-up raised that the winner omitted. Record every per-judge score, the chosen median, and each

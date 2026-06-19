@@ -43,6 +43,14 @@ ATTACK_TYPE = frozenset(
 )
 VERDICT = frozenset({"valid_attack", "partial_attack", "weak_attack", "unsupported_attack"})
 REFUTE_DISPOSITION = frozenset({"refuted", "not_refuted", "uncertain"})
+# R26 proportionate verification. A finding's `depth` separates a surface doc-vs-tree/number mismatch
+# from a deep design/statistical-validity insight; `contestability` is how settle-able the claim is (a
+# binary file/command check vs a judgment a skeptic could reasonably dispute). The Orchestrator reads
+# `contestability` to ROUTE verification effort: low -> one light confirmation pass; medium|high (or a
+# high-stakes blocker) -> the full adversarial Falsifier -> Tribunal -> Judge chain.
+DEPTH = frozenset({"surface", "deep"})
+CONTESTABILITY = frozenset({"low", "medium", "high"})
+VERIFICATION_ROUTE = frozenset({"light", "adversarial"})
 LOOP_GUARD_ACTION = frozenset({"CONTINUE", "REPLAN", "BRANCH", "ABANDON", "HUMAN_REVIEW"})
 BUDGET_TIER = frozenset({"economy", "standard", "deep"})
 DISPATCH_KIND = frozenset({"barrier", "pipeline"})
@@ -143,11 +151,16 @@ SCHEMAS: dict[str, dict[str, Any]] = {
             "finding_id", "role", "claim", "claim_type", "provisional_severity",
             "affected_decision", "evidence", "uncertainty", "agent_id",
         },
-        optional={"counterevidence", "validity_verdict"},
+        # depth/contestability (R26) are optional worker self-assessments; when present they let the
+        # Orchestrator route verification proportionately and let the validator flag over-verification
+        # of binary facts and discovery runs that produced zero deep findings.
+        optional={"counterevidence", "validity_verdict", "depth", "contestability"},
         enums={
             "claim_type": CLAIM_TYPE,
             "provisional_severity": SEVERITY,
             "validity_verdict": frozenset({"sufficient", "insufficient", "fatal_flaw"}),
+            "depth": DEPTH,
+            "contestability": CONTESTABILITY,
         },
     ),
     # Relevance Arbiter output: scored data, never an action verb (R1).

@@ -17,17 +17,30 @@ runtime (the main agent as Orchestrator plus `multi_agent_v1` subagents; no JS e
   Evidence Tribunal → independent Judge Panel → Orchestrator decision ledger → user checkpoint →
   approved implementation. Each round is mapped to a named phase shape (Understand / Find→Verify
   pipeline / judge panel / synthesize) with explicit `barrier` vs `pipeline` semantics.
+- **Discovery before judgment** — finders return multiple findings labeled `depth`
+  (surface drift vs deep design/statistical-validity insight) and `contestability`; a mandatory
+  deep-insight lens (power/MDE, resampling unit & effective-N, leakage, endpoint definition,
+  confirmatory-vs-exploratory structure) keeps the audit from stopping at doc-vs-tree drift. A run with
+  zero deep findings is a logged coverage gap.
+- **Proportionate verification** — verification effort is routed by `contestability`: binary
+  file-exists / number-vs-number facts get one confirmation pass, and the multi-lens falsifier/judge
+  panel is reserved for genuinely contestable claims. No more spending a 3-lens panel on facts that
+  cannot be overturned.
 - **Two-tier hard role split** — workers return artifacts-as-data and own zero decisions; an artifact's
   author can never be its own skeptic, auditor, or judge (machine-checked `agent_id` provenance).
 - **A deterministic substrate** — every artifact has a canonical schema
   (`scripts/schemas.py`) that a stdlib validator (`scripts/validate_artifacts.py`) actually enforces:
   per-instance schemas, cross-artifact referential integrity, anonymization, concurrency/budget caps,
-  and a scan that forbids decision verbs in worker artifacts.
+  **judge coverage** (every assembled evidence packet must be scored — no silent promotion of unjudged
+  evidence), and a scan that forbids decision verbs in worker artifacts.
+- **Honesty about reach** — claims that need facts outside the repo (dataset leakage, prior-art/SOTA,
+  pretraining provenance) are logged as `external_verification_unavailable` when no web/fetch tool
+  exists, rather than passed off as locally verified.
 - **Retained per-subagent debug records** — each dispatched subagent persists `agents/<agent_id>.json`
   for replay, audit, and later upgrades.
 - **A one-command self-test** (`scripts/selftest.py`) that generates a synthetic run, validates it, and
-  proves the harness *rejects* a dropped key, a dangling reference, an anonymization leak, and an
-  edit-before-approval.
+  proves the harness *rejects* a dropped key, a dangling reference, an anonymization leak, an
+  edit-before-approval, and an unjudged evidence packet.
 
 ## Layout
 

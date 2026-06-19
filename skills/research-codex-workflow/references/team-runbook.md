@@ -75,6 +75,14 @@ It stops spawning finders at `consecutive_dry_rounds >= loop_until_dry_K`, and s
 `agent_count_backstop` (logging the cap — no silent truncation). The until-dry loop never relaxes the
 existing per-hypothesis round caps in `loop-guard.md`; the tighter bound wins.
 
+The loop must actually RUN, not be nominal. A single Round A pass that goes straight to verification is
+only valid if that first round was itself dry (it surfaced everything and a re-spawn would dedup to
+nothing); otherwise spawn a second finder round before falsifying. Every finding round records
+`consecutive_dry_rounds` AND `deep_findings_count` in its round-summary `coverage_log`, so "we stopped
+because discovery was exhausted" is auditable and distinct from "we stopped after one shallow pass".
+Discovery effort is the budget that matters most: spend agents finding more (and deeper) before
+spending them re-judging the few you have.
+
 ## Mode-Specific Team Shapes
 
 Use the smallest complete team for the job.
@@ -83,13 +91,19 @@ Use the smallest complete team for the job.
 
 - Data Auditor;
 - Baseline Auditor;
-- Methodologist;
+- Methodologist **(runs the deep-insight lens: power/MDE, resampling unit & effective-N, leakage,
+  endpoint definition, confirmatory-vs-exploratory structure — not just doc-vs-tree drift)**;
 - Code Red-Team;
 - Claim Auditor;
 - Relevance Arbiter;
 - Falsifier;
 - Evidence Auditor;
 - 2 Judges.
+
+Route Round B by contestability (see `full-adversarial-workflow.md` "Proportionate verification"):
+the doc-vs-tree existence findings from Data/Baseline/Code/Claim auditors are mostly
+`contestability: low` → light confirmation pass; reserve the multi-lens Falsifier panel for the
+Methodologist's deep statistical-validity findings, where a wrong call actually costs something.
 
 ### Open Literature or Design Research
 
@@ -182,6 +196,11 @@ Judges are not voters over facts. Apply this order:
 5. Budget exhaustion -> honest partial report.
 6. When passes are accepted and hard gates pass, synthesize from the winning pass and graft
    runner-up blockers and `hard_gate_failures` rather than discarding them.
+
+Coverage precondition: before aggregating, every assembled `evidence-packets/*.yaml` must carry at
+least one judge score — judges split the packets, they do not score only the single "most important"
+one and leave the rest to be promoted unscored. `validate_artifacts.py` rejects a run with any unjudged
+packet (`validate_judge_coverage`).
 
 ## User-Facing Language
 

@@ -311,6 +311,83 @@ def validate_packet_provenance(run_root: Path, failures: list[str]) -> None:
             )
 
 
+def validate_judge_coverage(run_root: Path, failures: list[str]) -> None:
+    """R27 enforcement: every assembled evidence packet must receive at least one Round D judge score.
+
+    Closes the 'assembled N packets, judged 1, promoted N' coverage hole: a judge that picks only the
+    "most decision-critical" packet leaves the rest unscored, yet Round E still promotes them. A packet
+    that reaches the ledger as accepted must have been independently judged, never silently rubber-
+    stamped. (Round D may legitimately be empty when Round C accepted nothing — no packets, no
+    requirement.)"""
+    packet_ids = [
+        (load_json_yaml(p).get("packet_id", p.stem) if isinstance(load_json_yaml(p), dict) else p.stem)
+        for p in sorted(run_root.glob("evidence-packets/*.yaml"))
+    ]
+    if not packet_ids:
+        return
+    judged: set[str] = set()
+    for path in sorted(run_root.glob("round-d-judge-scores/*.yaml")):
+        score = load_json_yaml(path)
+        if isinstance(score, dict) and score.get("packet_id"):
+            judged.add(score["packet_id"])
+    for pid in packet_ids:
+        if pid not in judged:
+            failures.append(
+                f"evidence-packets: packet {pid!r} has no Round D judge score — every assembled "
+                f"packet must be independently judged (no silent promotion of unjudged evidence)"
+            )
+
+
+def validate_proportionate_verification(run_root: Path, warnings: list[str]) -> None:
+    """R26 (advisory): verification effort should scale with a finding's contestability. A
+    low-contestability binary fact (file exists / number A vs B) needs ONE confirmation pass, not a
+    full multi-lens falsifier panel. Warn when a low-contestability finding drew >=2 critiques, and
+    once when findings carry no contestability labels at all (so routing cannot be assessed)."""
+    findings: dict[str, dict] = {}
+    for path in sorted(run_root.glob("round-a-findings/*.yaml")):
+        data = load_json_yaml(path)
+        if isinstance(data, dict):
+            findings[path.stem] = data
+    if not findings:
+        return
+    if not any(f.get("contestability") for f in findings.values()):
+        warnings.append(
+            "Round A findings carry no contestability/depth labels; proportionate verification "
+            "routing cannot be assessed (see references/full-adversarial-workflow.md "
+            "'Proportionate Verification')"
+        )
+    crit_count: dict[str, int] = {}
+    for path in sorted(run_root.glob("round-b-critiques/*.yaml")):
+        crit = load_json_yaml(path)
+        if isinstance(crit, dict):
+            tgt = crit.get("target_finding_id")
+            crit_count[tgt] = crit_count.get(tgt, 0) + 1
+    for fid, data in findings.items():
+        if data.get("contestability") == "low" and crit_count.get(fid, 0) >= 2:
+            warnings.append(
+                f"{fid}: low-contestability finding drew {crit_count[fid]} critiques; a single "
+                f"confirmation pass is usually sufficient (over-verification of a binary fact)"
+            )
+
+
+def validate_discovery_depth(run_root: Path, warnings: list[str]) -> None:
+    """R26 (advisory): a deep audit should produce at least one design/statistical-validity insight,
+    not only surface doc-vs-tree drift. When findings carry depth labels but none is `deep`, warn that
+    the deep-insight lens may not have run (log it as a completeness gap)."""
+    findings = [
+        d for d in (load_json_yaml(p) for p in sorted(run_root.glob("round-a-findings/*.yaml")))
+        if isinstance(d, dict)
+    ]
+    if not findings:
+        return
+    if any("depth" in f for f in findings) and not any(f.get("depth") == "deep" for f in findings):
+        warnings.append(
+            "Round A produced zero depth=deep findings (only surface doc-vs-tree drift); the "
+            "design/statistical-validity lens may not have run — log this as a completeness gap "
+            "(see references/agent-roster.md 'Deep-Insight Lens')"
+        )
+
+
 def validate_provenance(run_root: Path, failures: list[str]) -> None:
     """R7 enforcement: an artifact's author (agent_id) can never be its own skeptic/auditor/judge. A
     Finding author may not also author a Critique against it or a JudgeScore of a packet built from it.
@@ -539,8 +616,11 @@ def validate_run_output(run_root: Path, warnings: list[str] | None = None) -> li
     validate_dispatch_groups(run_root, failures, warnings)
     scan_forbidden_worker_actions(run_root, failures)
     validate_packet_provenance(run_root, failures)
+    validate_judge_coverage(run_root, failures)
     validate_anonymization(run_root, failures)
     validate_round_completeness(run_root, failures)
+    validate_proportionate_verification(run_root, warnings)
+    validate_discovery_depth(run_root, warnings)
     return failures
 
 

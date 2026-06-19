@@ -26,13 +26,13 @@ Orchestrator emits no first-pass finding, critique, or score.
 
 1. **Research Director** - Maintains charter, decision objective, non-goals, success criteria.
 2. **Relevance Arbiter** - Scores decision consequence, information value, redundancy, cost; returns a scored signal (RelevanceScore), never an action.
-3. **Literature Scout** - Retrieves primary sources, contradictory evidence, source metadata.
+3. **Literature Scout** - Retrieves primary sources, contradictory evidence, source metadata. REQUIRES a web/fetch tool; if the runtime has none, this role is a no-op and every external-dependent claim is logged as a `claim_unverified` Completeness gap and in `coverage_log.external_verification_unavailable[]` (see `full-adversarial-workflow.md` "External-evidence honesty") — a local-only run never silently claims an external fact was verified.
 4. **Data Auditor** - Checks datasets, splits, denominators, labels, leakage, sample definitions.
 5. **Baseline Auditor** - Checks baseline fairness, feasibility, protocol alignment, missing controls.
 6. **Claim Auditor** - Compares report or paper claims to inspectable evidence.
 7. **Hypothesis Generator** - Produces null and materially different alternatives with falsifiers.
 8. **Falsifier / Red Team** - Attacks strongest-case assumptions, confounders, circularity, leakage.
-9. **Methodologist** - Reviews validity, controls, metrics, sample logic, stopping rules; returns validity_verdict data, never an action.
+9. **Methodologist** - Reviews validity, controls, metrics, sample logic, stopping rules; returns validity_verdict data, never an action. Owns the **deep-insight lens** (below): every full audit assigns at least one Methodologist (or Methodologist-tasked finder) so the run produces `depth: deep` findings, not only surface drift.
 10. **Code Red-Team** - Checks implementation drift, schemas, scripts, smoke tests, hidden assumptions.
 11. **Experiment Engineer** - Implements approved experiments in isolated write scope.
 12. **Test Reviewer** - Performs read-only fidelity and correctness verification.
@@ -65,10 +65,10 @@ check): an artifact's author can never be its own skeptic, auditor, or judge.
 
 For full adversarial mode when subagents are available:
 
-- Round A: three to six agents.
-- Round B: two to four agents.
+- Round A: three to six agents; each returns MULTIPLE findings labeled `depth`/`contestability`, and at least one runs the deep-insight lens.
+- Round B: two to four agents — but routed by contestability, not flat. Low-contestability binary facts get ONE light confirmation pass; the multi-lens Falsifier panel is reserved for `medium|high`-contestability or high-stakes findings (see `full-adversarial-workflow.md` "Proportionate verification").
 - Round C: one Evidence Auditor, with a second pass for high-impact disputes.
-- Round D: two or three independent judge passes.
+- Round D: two or three independent judge passes; the panel must cover EVERY assembled packet (split packets across judges — no scoring only the most critical one).
 - Round E and F: local Orchestrator.
 - Round G: only approved implementation and review agents.
 
@@ -128,8 +128,27 @@ the smallest tier that fits the task; `fanout_chosen` never exceeds it or the 12
 | deep | 6 |
 
 Canonical per-round fan-out ranges (ceilings on new spawns): A 3-6, B 2-4, C 1-2, D 2-3, E/F 0.
-`scripts/validate_artifacts.py` value-checks these plus `max_subagent_depth==2`,
+`scripts/validate_artifacts.py` value-checks these plus `max_subagent_depth==1`,
 `1<=max_concurrent_subagents<=12`, and `agent_count_backstop` against a real plan.
+
+## Deep-Insight Lens
+
+A run that only finds doc-vs-tree drift (a missing file, a number-vs-number mismatch) has audited the
+surface, not the research. At least one finder per full audit runs the deep-insight lens and returns
+`depth: deep` findings that reason about whether the work is *correct*, not just whether the docs match
+the tree:
+
+- statistical power / minimum detectable effect vs the claimed effect size and the CI width;
+- the resampling unit and effective-N (e.g. 27 scan-clusters vs 135 cases — a 5x difference that flows
+  into every CI), and whether the bootstrap/variance components are stable at that N;
+- train/test and pretraining-corpus leakage, and whether disjointness is verified or merely asserted;
+- primary-endpoint / denominator definition and unit consistency (do not add bag counts to component
+  counts);
+- confirmatory-vs-exploratory family structure (a "core" claim parked in a secondary FDR family can
+  never be confirmed by design).
+
+If a discovery pass yields zero `depth: deep` findings, that is itself a coverage gap to log and
+surface at Round E.5 — not evidence that the research is sound.
 
 Fallback when subagents are unavailable:
 

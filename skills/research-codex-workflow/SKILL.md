@@ -16,7 +16,10 @@ This skill (its `SKILL.md` and references) is the authoritative skill-first exec
 - Treat Codex subagent communication as Orchestrator-mediated unless native peer-to-peer capability is verified.
 - Follow the canonical Concurrency Policy in `references/agent-roster.md` (12 open subagents, depth 1, 18 worker roles plus the Orchestrator); do not restate or override the numbers elsewhere.
 - Require decision consequences before experiments, repairs, extended searches, or costly work.
+- Spend discovery before verification: produce multiple findings and at least one `depth: deep` (design/statistical-validity) finding — zero deep findings is a logged coverage gap, not a clean bill.
 - Audit evidence before judging. Model prose alone is not evidence.
+- Verify proportionately: route low-contestability binary facts to one confirmation pass; reserve the multi-lens falsifier/judge panel for contestable or high-stakes claims. Score every assembled evidence packet — no cherry-picking.
+- Be honest about reach: a local-only run logs external-dependent claims as unverified (`coverage_log.external_verification_unavailable`) instead of claiming it checked an external fact.
 - Stop at a user checkpoint before contested protocol, dataset, baseline, metric, claim, publication-readiness, or research-document edits.
 - Give write workers disjoint ownership or isolated worktrees. Read-only roles stay read-only.
 - Preserve user configuration and existing project instructions.

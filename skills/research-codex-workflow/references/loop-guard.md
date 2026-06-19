@@ -69,3 +69,25 @@ These are valid only if accompanied by a new discriminating evidence target.
 - One automatic global replan.
 - One or two response rounds in cross-falsification.
 - Configured token, cost, wall-clock, and tool-call budgets when available.
+
+## Round Coverage Log (canonical fields)
+
+Every round summary carries a `coverage_log` so bounded coverage never reads as total coverage. Record
+these keys (omit a key only when it does not apply):
+
+```yaml
+coverage_log:
+  findings_deduped_against_seen: 0          # loop-until-dry dedup count this round
+  consecutive_dry_rounds: 0                 # so "stopped because dry" is distinct from "stopped after one pass"
+  deep_findings_count: 0                    # depth: deep findings produced (0 is a coverage gap, not a clean bill)
+  verification_route_counts: {light: 0, adversarial: 0}   # proportionate-verification split
+  findings_killed_by_majority_refute: 0
+  items_truncated_or_sampled: []            # any top-K / no-retry / sampling bound
+  lenses_or_sources_not_run: []
+  external_verification_unavailable: []     # external-dependent claims no web/fetch tool could settle
+  concurrency_cap_hit: false
+  ran_as_sequential_fallback: false
+```
+
+`deep_findings_count == 0` and a non-empty `external_verification_unavailable` are both surfaced at
+Round E.5 (Completeness Critic) and, if material, in the Round F checkpoint — never silently dropped.

@@ -16,5 +16,7 @@
   ],
   "counterevidence": [],
   "uncertainty": "synthetic fixture",
-  "validity_verdict": "sufficient"
+  "validity_verdict": "sufficient",
+  "depth": "surface",
+  "contestability": "low"
 }
