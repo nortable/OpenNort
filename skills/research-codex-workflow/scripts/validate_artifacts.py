@@ -319,10 +319,10 @@ def validate_judge_coverage(run_root: Path, failures: list[str]) -> None:
     that reaches the ledger as accepted must have been independently judged, never silently rubber-
     stamped. (Round D may legitimately be empty when Round C accepted nothing — no packets, no
     requirement.)"""
-    packet_ids = [
-        (load_json_yaml(p).get("packet_id", p.stem) if isinstance(load_json_yaml(p), dict) else p.stem)
-        for p in sorted(run_root.glob("evidence-packets/*.yaml"))
-    ]
+    packet_ids = []
+    for p in sorted(run_root.glob("evidence-packets/*.yaml")):
+        data = load_json_yaml(p)
+        packet_ids.append(data.get("packet_id", p.stem) if isinstance(data, dict) else p.stem)
     if not packet_ids:
         return
     judged: set[str] = set()

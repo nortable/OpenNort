@@ -17,10 +17,17 @@ The "Open Literature or Design Research" team shape in `team-runbook.md` is the 
 ## Retrieval primitive: `scripts/fetch.py`
 
 ```bash
-python3 scripts/fetch.py <url>                 # http(s):// or file://
+python3 scripts/fetch.py <http(s)-url>          # only http/https are fetched
+python3 scripts/fetch.py file:///path --allow-file   # local testing ONLY (off by default)
 python3 scripts/fetch.py <url> --cache-dir .research-workflow/source-cache
-python3 scripts/fetch.py --selftest            # offline health check (no network)
+python3 scripts/fetch.py --selftest             # offline health check (no network)
 ```
+
+The URL is treated as UNTRUSTED (the Scout may fetch a link found in fetched content). fetch.py
+therefore refuses any scheme except http/https — `file://` (local-file read) needs the explicit
+`--allow-file` flag, and `data:`/`ftp:`/etc. are rejected outright — and for http/https it resolves the
+host and refuses private/loopback/link-local/reserved addresses (SSRF guard), re-checking every
+redirect. A refusal is reported as `status: error` with a reason; it is never a silent fetch.
 
 It fetches the URL, caches the raw bytes, and prints a `source-record` (schema in `scripts/schemas.py`):
 

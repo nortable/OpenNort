@@ -68,11 +68,20 @@ examples/synthetic-run/          a fully worked Round 0→G run (the self-test o
 ## Quick start
 
 ```bash
-# install: copy or symlink the skill into your Codex skills dir
-cp -r skills/research-codex-workflow ~/.codex/skills/
+# install: symlink the skill into ~/.codex/skills and verify it (idempotent).
+# A symlink means `git pull` instantly updates the installed skill — no manual re-sync.
+./skills/research-codex-workflow/scripts/install.sh          # or --copy for a frozen snapshot
+# CODEX_SKILLS_DIR=/path ./skills/.../install.sh             # custom skills dir
 
-# verify the deterministic substrate (generates a run, validates it, runs negative controls)
-python3 skills/research-codex-workflow/scripts/selftest.py
+# (install.sh already runs both, but you can re-run them any time:)
+python3 skills/research-codex-workflow/scripts/selftest.py   # substrate: clean run + 6 negative controls
+python3 skills/research-codex-workflow/scripts/fetch.py --selftest   # web fetch/cache/sha256 + policy refusals
+```
+
+Gate any real run tree (Codex or otherwise) with the fixture-agnostic checks:
+
+```bash
+python3 skills/research-codex-workflow/scripts/validate_artifacts.py --audit-run <run-dir>
 ```
 
 Then invoke from Codex:

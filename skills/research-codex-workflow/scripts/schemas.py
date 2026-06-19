@@ -289,7 +289,7 @@ SCHEMAS: dict[str, dict[str, Any]] = {
         },
         enums={"loop_guard_action": LOOP_GUARD_ACTION},
     ),
-    # ---- Literature Scout retrieval (R28 web) ----
+    # ---- Literature Scout retrieval (R31 web) ----
     # Emitted by scripts/fetch.py; gives an external source a reproducible, tamper-evident identity
     # (url + retrieval_date + content_sha256) so a web-backed claim is real evidence, not model prose.
     "source-record": _schema(
