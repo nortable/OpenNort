@@ -609,6 +609,18 @@ def validate_run_output(run_root: Path, warnings: list[str] | None = None) -> li
     require(summary.get("protected_files_not_edited") is True, "generated run must preserve protected files", failures)
     require(summary.get("loop_guard_action") in {"HUMAN_REVIEW", "ABANDON", "REPLAN"}, "generated run must trigger Loop Guard", failures)
 
+    failures.extend(validate_real_run(run_root, warnings))
+    return failures
+
+
+def validate_real_run(run_root: Path, warnings: list[str]) -> list[str]:
+    """The substrate checks that apply to ANY run tree (not only the synthetic fixture): schema
+    conformance, cross-artifact references, generate/verify provenance, dispatch caps, anonymization,
+    packet provenance, judge coverage, and the proportionate-verification / discovery-depth advisories.
+
+    Unlike validate_run_output (which also asserts the fixture's exact filenames and seeded decision
+    classes), this is fixture-agnostic, so `--audit-run <path>` can gate a real Codex/agent run."""
+    failures: list[str] = []
     validate_instances(run_root, failures)
     validate_references(run_root, failures)
     validate_provenance(run_root, failures)
@@ -643,7 +655,10 @@ def validate_single_artifact(path: Path, schema_name: str | None) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--fixture", type=Path, default=SKILL_ROOT / "examples" / "synthetic-adversarial-case.yaml")
-    parser.add_argument("--run-root", type=Path, default=None)
+    parser.add_argument("--run-root", type=Path, default=None,
+                        help="validate the synthetic fixture run tree (fixture-specific paths + general checks)")
+    parser.add_argument("--audit-run", type=Path, default=None,
+                        help="gate any real run tree with the fixture-agnostic substrate checks")
     parser.add_argument("--artifact", type=Path, default=None, help="validate a single artifact instance")
     parser.add_argument("--type", dest="schema_name", default=None, help="schema name for --artifact")
     args = parser.parse_args()
@@ -652,6 +667,8 @@ def main() -> int:
 
     if args.artifact is not None:
         failures = validate_single_artifact(args.artifact, args.schema_name)
+    elif args.audit_run is not None:
+        failures = validate_real_run(args.audit_run, warnings)
     else:
         failures = validate_templates()
         failures.extend(validate_fixture(args.fixture))
@@ -667,6 +684,8 @@ def main() -> int:
 
     if args.artifact is not None:
         print(f"OK: {args.artifact} conforms to schema '{args.schema_name}'")
+    elif args.audit_run is not None:
+        print(f"OK: {args.audit_run} passes the fixture-agnostic substrate checks")
     else:
         print("OK: templates parse and synthetic fixture satisfies seeded adversarial checks")
     return 0
