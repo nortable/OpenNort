@@ -246,6 +246,13 @@ The Evidence Auditor evaluates findings and critiques before any judge panel. It
 `partially_supported` decisions become packets — and assigns `packet_id`s. Packet assembly is an
 Orchestrator integration step, keeping the worker free of any final-decision authority.
 
+**Cluster into a FEW decision-relevant packets — do not emit one packet per finding.** A packet bundles
+the evidence for ONE decision-relevant claim. Before assembling, DEDUP near-duplicate accepted findings
+and GROUP the rest by the sub-decision they bear on (e.g. "detection baselines", "leakage controls",
+"metric/fairness"). N accepted findings should collapse to a handful of packets, not N — assembling one
+packet per finding explodes the judge panel (N packets → 2N judge scores) and is the main way a run
+becomes bloated. Aim for a small set of high-value packets the panel can actually weigh.
+
 Acceptable evidence includes at least one of:
 
 - file path plus line, symbol, or structured location;

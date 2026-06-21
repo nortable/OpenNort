@@ -127,7 +127,9 @@ test) in isolated worktrees at Round G.
 7. Strip author identity and assign stable packet IDs.
 8. Run Round B cross-falsification with no self-review.
 9. Run Round C evidence audit before any judging.
-10. Build accepted evidence packets for judges; omit unsupported persuasive text.
+10. Build accepted evidence packets for judges; omit unsupported persuasive text. CLUSTER/dedup
+    accepted findings into a FEW decision-relevant packets (group by sub-decision) — do not emit one
+    packet per finding, which explodes the panel into 2N judge scores and bloats the run.
 11. Run Round D independent judges.
 12. Aggregate without majority-overriding hard evidence failures.
 13. Write Round E decision ledger.
