@@ -1,5 +1,16 @@
 # Redesign: Mirror Claude Code Orchestration onto the Codex Research Workflow
 
+> **SUPERSEDED 2026-06-20 by the lean single-mode consolidation.** The skill no longer has 4 modes or
+> an 18-role roster. It is now ONE enforced adversarial workflow: Mode 0/1/3 removed (modes.md,
+> product-build-spec.md, code-review.md, web-research.md, examples/invocation-examples.md deleted);
+> roster trimmed to 5 read-only roles (Finder/Falsifier/Evidence Auditor/Judge/Completeness Critic) +
+> on-demand Round G writers; and a HARD completion gate added — `validate_artifacts.py --audit-run`
+> now fails a run with no/too-few `agents/*.json` spawn records, artifacts not traceable to a spawn, or
+> zero `depth: deep` findings (so a single-context synthesis that fakes the team cannot pass). The
+> machine substrate (schemas.py/validate_artifacts.py/run_synthetic_fixture.py/selftest.py) is kept and
+> still green: `python3 scripts/selftest.py` (positive + 8 negative controls). The roadmap below is
+> retained as the historical record of the prior 25-item mirror design.
+
 Date: 2026-06-19
 Goal: redesign `research-codex-workflow` so its **division of labor mirrors the Claude Code Workflow
 orchestration model** ("the master template"), translated into Codex reality (no JS engine; only the
@@ -189,66 +200,3 @@ roles stay read-only; human stays in the loop at checkpoints.
 ## Rejected (not carried): partial-panel-may-not-decide clause (contradicts budget-exhaustion rule);
 no-op agent_role check on evidence-packet; "two divergent enums in one field" mischaracterization;
 fabricated FANOUT_RANGE['G']; single generic int bound. See run wf_e0057248-1fd output for detail.
-
-## Iteration 2 — depth & proportionality (from a head-to-head against a Claude Code Workflow run)
-
-A live A/B on the same documentation audit (this harness vs a discovery-heavy, contestability-routed
-Claude Code Workflow) exposed three gaps: the run caught surface doc-vs-tree drift exhaustively but
-produced zero design/statistical-validity insight; it applied a flat 3-lens falsifier panel to binary
-file-exists facts (12 critiques, 0 overturned — "keeps judging"); and Round D scored only 1 of 4
-assembled packets while Round E promoted all 4. Carried items:
-
-- **R26 [M] Proportionate verification & deep-insight discovery.** `finding` gains optional
-  `depth` (surface|deep) and `contestability` (low|medium|high); added `DEPTH`, `CONTESTABILITY`,
-  `VERIFICATION_ROUTE` enums. The Orchestrator routes Round B by contestability (light single pass for
-  binary facts; multi-lens panel only for contestable/high-stakes claims). A mandatory deep-insight
-  lens (power/MDE, resampling unit & effective-N, leakage, endpoint definition, confirmatory-vs-
-  exploratory structure) makes the run reach design validity, not only drift. `validate_artifacts.py`
-  adds advisory `validate_proportionate_verification` (warn on >=2 critiques for a low-contestability
-  finding / missing labels) and `validate_discovery_depth` (warn on zero `depth: deep`). Files:
-  schemas.py, validate_artifacts.py, run_synthetic_fixture.py, full-adversarial-workflow.md,
-  team-runbook.md, agent-roster.md, modes.md, SKILL.md, loop-guard.md.
-- **R27 [M] Judge coverage (hard).** `validate_judge_coverage` rejects any run where an assembled
-  evidence packet has no Round D judge score — closes the "judged 1 of N, promoted N" hole. New
-  selftest negative control (`unjudged_packet`). Files: validate_artifacts.py, selftest.py,
-  full-adversarial-workflow.md, team-runbook.md, agent-roster.md.
-- **R28 [S] External-evidence honesty.** Literature Scout requires a web/fetch tool; without one it is
-  a no-op and external-dependent claims (leakage, prior-art, pretraining provenance) are logged in
-  `coverage_log.external_verification_unavailable[]` / as `claim_unverified` gaps, never passed off as
-  locally verified. Canonical `coverage_log` field list added to loop-guard.md. Files:
-  full-adversarial-workflow.md, agent-roster.md, modes.md, loop-guard.md, SKILL.md.
-- **Fix.** agent-roster.md said the validator checks `max_subagent_depth==2`; the code enforces `==1`.
-  Reconciled to `==1`.
-
-Re-run `scripts/selftest.py` (now 5 negative controls) and `--run-root examples/synthetic-run` after
-this batch; the committed run carries depth/contestability so `--run-root` stays warning-free.
-
-## Iteration 3 — ledger hardening, web, code review (live supervision of a real Codex run)
-
-Supervising a real post-update Codex run exposed (a) a second discovery round appending findings
-straight into the Round E ledger without B→C→D, which `validate_judge_coverage` could not catch (no
-packet was built), and (b) that `--run-root` is fixture-specific and cannot gate a real run. Carried:
-
-- **R29 [M] Ledger→packet coverage (hard).** `validate_ledger_packet_coverage`: every accepted ledger
-  issue (accepted_blocker / accepted_non_blocking) must share an evidence_id with a judged packet, or
-  it bypassed the tribunal + judge panel. New selftest control (`ledger_issue_without_judged_packet`).
-  Verified: it flags the real run's second-pass A9/A11. Files: validate_artifacts.py, selftest.py.
-- **R30 [M] `--audit-run` general run gate.** Extract the fixture-agnostic substrate checks into
-  `validate_real_run()`, callable as `validate_artifacts.py --audit-run <dir>` to gate any real run
-  tree (the old `--run-root` asserts the synthetic fixture's exact filenames). Files:
-  validate_artifacts.py.
-- **R31 [L] Web research (Literature Scout落地).** `scripts/fetch.py` — stdlib urllib fetch + cache +
-  content_sha256, offline-safe (`file://` + `--selftest`), emits a `source-record` (new schema +
-  template). Wired into the Literature Scout dispatch template, agent-roster, modes.md, SKILL.md, and a
-  new `references/web-research.md` (untrusted-data rule, reproducible-evidence contract, native-tool
-  fallback). Files: fetch.py, schemas.py, source-record.yaml, role-dispatch-templates.md,
-  agent-roster.md, modes.md, SKILL.md, web-research.md, README.md.
-- **R32 [M] Code Review mode.** Reuses the Round 0→G substrate pointed at a diff with code lenses
-  (correctness/security/performance/reuse/tests/compatibility); proportionate verification, judge
-  coverage, and the Round F checkpoint carry over. New `references/code-review.md`, a Code Review team
-  shape in team-runbook.md, a Code Reviewer dispatch template, and SKILL.md/modes.md/README wiring. No
-  new schema — a code-review finding is a `Finding` (depth=bug-vs-style, contestability=reproduces-vs-
-  subtle). Files: code-review.md, team-runbook.md, role-dispatch-templates.md, SKILL.md, modes.md,
-  README.md.
-
-selftest.py now runs 6 negative controls; `fetch.py --selftest` covers the fetch/cache/hash path.

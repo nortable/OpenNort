@@ -11,12 +11,22 @@ runtime (the main agent as Orchestrator plus `multi_agent_v1` subagents; no JS e
 
 ## What it gives you
 
-- **Four modes** — lightweight reconnaissance, standard research, full adversarial, and a gated
-  product-build mode — chosen by an explicit router (`skills/research-codex-workflow/SKILL.md`).
+- **One enforced mode, run as two separate passes.** No router, no lighter mode: invoking the skill
+  commits to the full adversarial workflow, split into **Run 1 — Research & Plan** (Round 0→F,
+  read-only, ends with a detailed literature-backed `round-f-implementation-plan`) and **Run 2 —
+  Implementation** (Round G, a separate user-initiated run that executes the approved plan). Planning
+  and implementation are never fused in one run — the run-mode gate rejects a plan run that produced a
+  Round-G report.
 - **A full adversarial protocol** (Round 0→G): independent findings → anonymous cross-falsification →
   Evidence Tribunal → independent Judge Panel → Orchestrator decision ledger → user checkpoint →
-  approved implementation. Each round is mapped to a named phase shape (Understand / Find→Verify
-  pipeline / judge panel / synthesize) with explicit `barrier` vs `pipeline` semantics.
+  approved implementation. Each round is mapped to a named Claude-Code phase shape (Understand /
+  Find→Verify pipeline / judge panel / synthesize) with explicit `barrier` vs `pipeline` semantics; an
+  "Orchestration model" section documents the primitive-by-primitive mapping and the honest Codex
+  translation seams.
+- **A completion gate that real subagents actually ran.** `--audit-run <dir>` fails a run with no/too-few
+  `agents/<id>.json` spawn records, an artifact not traceable to a spawn, zero deep findings, a
+  single-judge (non-panel) Round D, an edit-before-approval, or a fused plan/Round-G run — so a
+  single-context synthesis that *claims* to have run the team cannot pass.
 - **Discovery before judgment** — finders return multiple findings labeled `depth`
   (surface drift vs deep design/statistical-validity insight) and `contestability`; a mandatory
   deep-insight lens (power/MDE, resampling unit & effective-N, leakage, endpoint definition,
@@ -30,51 +40,60 @@ runtime (the main agent as Orchestrator plus `multi_agent_v1` subagents; no JS e
   author can never be its own skeptic, auditor, or judge (machine-checked `agent_id` provenance).
 - **A deterministic substrate** — every artifact has a canonical schema
   (`scripts/schemas.py`) that a stdlib validator (`scripts/validate_artifacts.py`) actually enforces:
-  per-instance schemas, cross-artifact referential integrity, anonymization, concurrency/budget caps,
-  **judge coverage** (every assembled evidence packet must be scored), **ledger→packet coverage**
-  (every accepted ledger issue must trace to a judged packet — a second discovery round cannot append
-  straight to the ledger), and a scan that forbids decision verbs in worker artifacts. `--audit-run
-  <dir>` gates any real run tree with these checks (not just the synthetic fixture).
-- **Web research with a reproducible evidence contract** — `scripts/fetch.py` gives the Literature
-  Scout a real retrieval primitive: it fetches a URL, caches the bytes, and emits a `source-record`
-  (url + retrieval_date + content_sha256), so a web-backed claim is reproducible and tamper-evident.
-  Treated as untrusted data; opt-in per charter; absent a web tool, external-dependent claims are
-  logged as `external_verification_unavailable` rather than faked. See `references/web-research.md`.
-- **Code review reuses the substrate** — point the Round 0→G pipeline at a diff with code lenses
+  strict per-instance schemas, evidence-record IDs that resolve to concrete records, core run
+  artifacts, declared-round summaries, cross-artifact referential integrity, anonymization,
+  generate/verify provenance including EvidenceDecision authors,
+  concurrency/budget caps, writer-ownership overlap checks, **judge coverage** (every assembled
+  evidence packet must be scored), **ledger→packet coverage** (every accepted ledger issue must name
+  source claims and trace to a judged packet), Round F checkpoint gating, and a scan that forbids
+  decision verbs in worker artifacts. `--audit-run <dir>` gates any complete real run tree with these
+  checks (not just the synthetic fixture).
+- **Proactive literature review on Codex's native tools.** When a claim turns on an external fact
+  (novelty / prior-art / SOTA / leakage / provenance) the charter sets `external_evidence_needed: yes`
+  and a Literature Scout is mandatory — it uses **Codex's native search + fetch + PDF tools** to find
+  and *read* the papers (quoting the exact equation, the baseline method + dataset + metric, the
+  implementation detail), not a generic summary. `scripts/fetch.py` is the optional deterministic
+  archive that pins a `content_sha256` for reproducibility; it does not reinvent a fetcher/parser. The
+  gate fails a `yes` charter that produced neither a `source-record` nor an `external_verification_unavailable`
+  log.
+- **Code review reuses the substrate** — point the same Round 0→F pipeline at a diff with code lenses
   (correctness / security / performance / reuse / tests / compatibility); proportionate verification,
-  judge coverage, and the Round F checkpoint all carry over unchanged. See `references/code-review.md`.
+  judge coverage, and the Round F checkpoint all carry over unchanged (ledger classes map to merge gates).
 - **Retained per-subagent debug records** — each dispatched subagent persists `agents/<agent_id>.json`
   for replay, audit, and later upgrades.
-- **A one-command self-test** (`scripts/selftest.py`) that generates a synthetic run, validates it, and
-  proves the harness *rejects* a dropped key, a dangling reference, an anonymization leak, an
-  edit-before-approval, an unjudged evidence packet, and an accepted ledger issue with no judged
-  packet. (`scripts/fetch.py --selftest` separately proves the fetch/cache/hash path offline.)
+- **A one-command self-test** (`scripts/selftest.py`) that generates a synthetic plan run, validates it,
+  and proves the harness rejects 11 negative controls: a dropped required key, a dangling evidence id, an
+  anonymization leak, an edit-before-approval, an unjudged packet, a ledger bypass, a faked run with no
+  spawn records, a surface-only (zero-deep) discovery pass, a single-judge non-panel Round D, a declared
+  literature run that produced no evidence, and a plan run fused with a Round-G report.
+  (`scripts/fetch.py --selftest` separately proves the fetch/cache/hash path + SSRF policy offline.)
 
 ## Layout
 
 ```
-skills/research-codex-workflow/   the skill (router + references + scripts + templates)
-  SKILL.md                        compact mode router and invariants
-  references/                     protocol, roster, contracts, loop guard, runbook, dispatch,
-                                  code-review, web-research
+skills/research-codex-workflow/   the skill (one lean enforced mode + references + scripts + templates)
+  SKILL.md                        invariants, the two-run split, and the completion gate
+  references/                     full-adversarial-workflow, team-runbook, agent-roster,
+                                  role-dispatch-templates, artifact-contracts, worktrees-and-artifacts,
+                                  loop-guard, experiment-card, experiment-gates
   scripts/                        schemas.py, validate_artifacts.py, run_synthetic_fixture.py,
                                   create_run_workspace.py, selftest.py, fetch.py
-  assets/templates/               JSON-compatible YAML artifact templates
+  assets/templates/               JSON-compatible YAML artifact templates (incl. implementation-plan)
   examples/                       synthetic adversarial fixture
-docs/                             design notes
-examples/synthetic-run/          a fully worked Round 0→G run (the self-test output)
+docs/                             design notes (redesign-mirror-claude-roadmap)
+examples/synthetic-run/          deterministic Run-1 plan-run fixture (the self-test output)
 ```
 
 ## Quick start
 
 ```bash
-# install: symlink the skill into ~/.codex/skills and verify it (idempotent).
+# install: symlink the skill into ~/.codex/skills and verify the installed target.
 # A symlink means `git pull` instantly updates the installed skill — no manual re-sync.
 ./skills/research-codex-workflow/scripts/install.sh          # or --copy for a frozen snapshot
 # CODEX_SKILLS_DIR=/path ./skills/.../install.sh             # custom skills dir
 
 # (install.sh already runs both, but you can re-run them any time:)
-python3 skills/research-codex-workflow/scripts/selftest.py   # substrate: clean run + 6 negative controls
+python3 skills/research-codex-workflow/scripts/selftest.py   # substrate: clean run + 11 negative controls
 python3 skills/research-codex-workflow/scripts/fetch.py --selftest   # web fetch/cache/sha256 + policy refusals
 ```
 
@@ -86,9 +105,10 @@ python3 skills/research-codex-workflow/scripts/validate_artifacts.py --audit-run
 
 Then invoke from Codex:
 
-> Use the research-codex-workflow skill in full adversarial mode on this research repository. Run Round
-> 0 through Round E, stop at Round F, and do not edit research-protocol documents until I approve the
-> contested decisions.
+> Use the research-codex-workflow skill on this research repository. Run Run 1 (Round 0→F): review the
+> literature for prior-art/SOTA/leakage, run the adversarial findings → falsification → evidence →
+> judge-panel pipeline, and produce a detailed implementation plan. Stop at the Round F checkpoint and
+> do not edit anything — I will start Run 2 to implement once I approve the plan.
 
 ## License
 

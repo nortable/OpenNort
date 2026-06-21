@@ -77,7 +77,7 @@ error: null
 
 ## Completeness Critique
 
-Returned by the Completeness Critic in Round E.5 (full adversarial mode).
+Returned by the Completeness Critic in Round E.5, before the Round F checkpoint.
 
 ```yaml
 gap_id: string
@@ -269,4 +269,23 @@ checkpoints:
     consequence_of_no_decision: string
 stop_round: F
 edit_permission_before_approval: false
+```
+
+## Implementation Plan
+
+The Round F deliverable — the product of Run 1 (Research & Plan). Run 2 (implementation) loads it.
+
+```yaml
+run_id: string
+objective: string
+decision_link: string            # optional
+approach: string                 # chosen design + why
+alternatives_considered: []      # optional
+literature_summary: string       # source-records found, or what was logged unverified
+change_list: []                  # file-level: [{path, change, owner}]
+experiment_card_ids: []          # optional
+ordered_steps: []                # each a discrete task a Run-2 implementer executes
+validation_strategy: string
+risks: []
+open_decisions: []               # user decisions still required
 ```

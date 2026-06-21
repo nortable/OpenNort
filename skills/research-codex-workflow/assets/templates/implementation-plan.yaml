@@ -1,0 +1,17 @@
+{
+  "run_id": "",
+  "objective": "",
+  "decision_link": "",
+  "approach": "",
+  "alternatives_considered": [],
+  "literature_summary": "",
+  "change_list": [],
+  "experiment_card_ids": [],
+  "ordered_steps": [],
+  "validation_strategy": "",
+  "risks": [],
+  "open_decisions": [],
+  "audit_run_ok": true,
+  "audit_run_command": "",
+  "judge_synthesis": {}
+}

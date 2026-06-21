@@ -26,7 +26,7 @@ Workspace selection (R20):
 - a disjoint directory is WEAKER isolation than a worktree — do not silently equate the two;
 - read-only roles get no writer directory; `scripts/validate_artifacts.py` rejects a read-only role
   that carries write permissions or owned files;
-- the lock stays a plain-text claim line — no SQLite/heartbeat machinery (that is product-build-gated).
+- the lock stays a plain-text claim line — deliberately simple, no SQLite/heartbeat machinery.
 
 Rules:
 

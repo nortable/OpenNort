@@ -107,13 +107,21 @@ SCHEMAS: dict[str, dict[str, Any]] = {
             "run_id", "objective", "decision_to_support", "scope", "success_criteria",
             "user_checkpoint_required", "edit_permission_before_checkpoint",
         },
+        # external_evidence_needed forces a Round-0 decision about literature/web evidence so it is not
+        # left to chance: "yes" makes a Literature Scout mandatory in Round A and the validator FAILS a
+        # run that declared it but produced no source-record and did not log it unavailable.
         optional={
             "decision_owner", "non_goals", "known_high_risk_choices", "likely_affected_files",
-            "required_evidence", "budget_or_cost_constraints",
+            "required_evidence", "budget_or_cost_constraints", "external_evidence_needed",
         },
         enums={
             "user_checkpoint_required": frozenset({"yes", "no", "unknown"}),
             "edit_permission_before_checkpoint": frozenset({"yes", "no"}),
+            "external_evidence_needed": frozenset({"yes", "no", "unknown"}),
+            # run_mode is the Run-1/Run-2 discriminator the gate branches on (plan = Round 0→F read-only
+            # ending at the plan; implement = the separate Round G run). Absent → inferred from whether a
+            # round-g-final-report exists.
+            "run_mode": frozenset({"plan", "implement"}),
         },
     ),
     "dispatch-plan": _schema(
@@ -311,13 +319,37 @@ SCHEMAS: dict[str, dict[str, Any]] = {
             "interpretation_table", "spec_hash",
         },
     ),
+    # ---- Round F deliverable: the plan (Run 1's product; Run 2 consumes it) ----
+    # Research & Plan (Round 0→F) is read-only and ENDS here with a detailed, literature-backed plan.
+    # Implementation (Round G) is a SEPARATE user-initiated run that loads this plan as its input —
+    # planning and implementation are never fused in one run (fusing them stalls the model).
+    "implementation-plan": _schema(
+        required={
+            "run_id", "objective", "approach", "literature_summary", "change_list",
+            "ordered_steps", "validation_strategy", "risks", "open_decisions",
+        },
+        # Run 1 records its completion-gate result and judge-panel synthesis HERE (it has no Round-G
+        # report) — so the gate-recording instruction is satisfiable on the plan path.
+        optional={
+            "alternatives_considered", "experiment_card_ids", "decision_link",
+            "audit_run_ok", "audit_run_command", "judge_synthesis",
+        },
+    ),
     "final-report": _schema(
         required={
             "run_id", "mode", "summary_zh", "decision_ledger", "accepted_evidence",
             "user_checkpoints", "protected_files_not_edited", "next_highest_value_action",
         },
+        # audit_run_ok / audit_run_command bind the report to the enforcement gate: the final report
+        # is only legitimate when `validate_artifacts.py --audit-run <run_root>` exited 0, and it
+        # records the exact command + result so a faked "done" is a discrete, checkable lie rather
+        # than a vague claim (see references/full-adversarial-workflow.md "Completion Gate").
+        # judge_synthesis records the panel synthesis so "synthesize from the winner + graft runner-up
+        # blockers" is auditable, not just prose: which packet/pass won, the per-judge scores, the
+        # chosen median, and which runner-up blockers/hard_gate_failures were grafted in.
         optional={
             "task_charter", "downgraded_or_rejected_claims", "validation", "residual_risks",
+            "audit_run_ok", "audit_run_command", "judge_synthesis",
         },
     ),
     # ---- Per-subagent debug record (retained for later debugging / upgrades) ----
@@ -363,6 +395,7 @@ TEMPLATE_SCHEMA_MAP: dict[str, str] = {
     "user-checkpoint.yaml": "user-checkpoint",
     "round-summary.yaml": "round-summary",
     "source-record.yaml": "source-record",
+    "implementation-plan.yaml": "implementation-plan",
 }
 
 

@@ -1,122 +1,181 @@
 ---
 name: research-codex-workflow
-description: Research workflow cornerstone for research-oriented coding, repo reconnaissance, paper reproduction, experiment cleanup, research documentation, baselines/evaluation/metrics/leakage/result-table work, and explicit adversarial or multi-agent requests such as full-agent, red-team, research-team, 对抗模式, 多 Agent, 多智能体, or 多个 agent. Use to keep research work decision-linked, evidence-gated, loop-bounded, and separated into lightweight, standard, full-adversarial, or product-build modes.
+description: Single enforced adversarial multi-agent research workflow — the cornerstone for research-oriented coding, repo reconnaissance, paper reproduction, experiment cleanup, research documentation, and baselines/evaluation/metrics/leakage/result-table/claim work. Fires on substantial research decisions and on explicit adversarial or multi-agent requests such as full-agent, red-team, research-team, 对抗模式, 多 Agent, 多智能体, 多个 agent, 最高规格, 最高级规格, 最高模式, or 最高强度. When it fires it runs in two separate invocations — Run 1 (Round 0→F) produces a literature-backed implementation plan and stops; Run 2 (Round G) is a separate, user-initiated implementation pass — decision-linked, evidence-gated, loop-bounded, and enforced by a completion gate that real subagents actually ran.
 ---
 
 # Research Codex Workflow
 
-Act as a deterministic research Orchestrator. Do not let one context freely mix exploration, hypothesis generation, implementation, verification, judging, and claim writing.
+**One mode, two runs.** When this skill fires, run the adversarial multi-agent research workflow as a
+deterministic Orchestrator. There is no lighter mode and no router. If a task does not warrant the full
+workflow, do **not** invoke this skill — handle it directly and lightweight. Once invoked, do not
+collapse the workflow into a single-context synthesis; that shortcut is the documented failure mode and
+the completion gate rejects it.
 
-This skill (its `SKILL.md` and references) is the authoritative skill-first execution configuration. The current configuration sets `allow_product_build: false`, so do not build a standalone `research-team` CLI unless the user explicitly changes that.
+**Bias to action, not to self-inspection.** Your job is the research substance — findings, evidence, and
+the plan — produced by spawning real subagents. This skill is the METHOD, not the SUBJECT: do not sit and
+audit, narrate, or "fix" the workflow itself, and do not re-check your own process mid-run. The
+validator is a SINGLE final gate you run once at the end, not an ongoing activity. If you ever notice
+yourself reasoning about the workflow's correctness instead of the user's research, stop and dispatch a
+Finder.
+
+The Orchestrator is the resident main Codex agent. It owns ALL deterministic control flow (dispatch,
+sequencing, loop continuation/termination, routing/the RUN/DEFER/PARK/REJECT/HUMAN_REVIEW action class,
+dedup, anonymization, evidence-packet assembly, final synthesis) and makes NO first-pass finding of its
+own. Subagents are bounded, single-purpose workers whose output IS one schema-conformant artifact; they
+cannot see peers, own no final decision, and an artifact's author can never be its own
+skeptic/auditor/judge.
+
+## Two runs: Plan, then Implement (never fused)
+
+The workflow is split into two SEPARATE invocations. Do not fuse them — running research, planning,
+and implementation in one context overloads it and stalls the model.
+
+- **Run 1 — Research & Plan (the default).** Round 0→F, fully READ-ONLY. Charter → (mandatory
+  literature review when external facts are in play) → independent Finders → falsification → evidence
+  tribunal → judge panel → decision ledger → a **detailed, literature-backed implementation plan**
+  (`round-f-implementation-plan.{yaml,md}`) → user checkpoint. Then **STOP**. The deliverable is the
+  PLAN, not code; do not edit project files.
+- **Run 2 — Implementation (separate, user-initiated).** ONLY when the user explicitly asks to
+  implement an approved plan does a FRESH run execute Round G: load `round-f-implementation-plan.yaml`
+  as its input, dispatch implementer agents against its `ordered_steps` in isolated worktrees, verify
+  each as it lands, and report. Run 2 executes the plan; it does not re-derive it.
+
+A normal invocation ends at the plan and hands it to the user. Never roll forward from plan into
+implementation inside the same run.
+
+## When this skill fires (else stay lightweight without it)
+
+- explicit adversarial / red-team / full-agent / multi-agent / research-team / 对抗模式 / 多 Agent /
+  多智能体 / 多个 agent / 最高规格 / 最高级规格 / 最高模式 requests; OR
+- a substantial research decision: experiments, baselines, metrics, leakage, data definitions, result
+  tables, reviewer-facing claims, or research-document edits.
+
+Ordinary repo reading, a narrow question, a small bugfix, or a CI/lint repair is handled directly
+without this skill. An unfamiliar repository alone does not invoke it; auditing documents does not
+authorize editing them.
 
 ## Hard Invariants
 
-- Choose the smallest mode that fits the user request.
-- Full adversarial mode requires an explicit adversarial or multi-agent request.
-- Treat Codex subagent communication as Orchestrator-mediated unless native peer-to-peer capability is verified.
-- Follow the canonical Concurrency Policy in `references/agent-roster.md` (12 open subagents, depth 1, 18 worker roles plus the Orchestrator); do not restate or override the numbers elsewhere.
-- Require decision consequences before experiments, repairs, extended searches, or costly work.
-- Spend discovery before verification: produce multiple findings and at least one `depth: deep` (design/statistical-validity) finding — zero deep findings is a logged coverage gap, not a clean bill.
-- Audit evidence before judging. Model prose alone is not evidence.
-- Verify proportionately: route low-contestability binary facts to one confirmation pass; reserve the multi-lens falsifier/judge panel for contestable or high-stakes claims. Score every assembled evidence packet — no cherry-picking.
-- Be honest about reach: a local-only run logs external-dependent claims as unverified (`coverage_log.external_verification_unavailable`) instead of claiming it checked an external fact.
-- Stop at a user checkpoint before contested protocol, dataset, baseline, metric, claim, publication-readiness, or research-document edits.
-- Give write workers disjoint ownership or isolated worktrees. Read-only roles stay read-only.
+- The main Codex agent is the ONLY Orchestrator; it never emits a first-pass finding, critique, or score.
+- **Real subagents by default.** Probe `multi_agent_v1` (`spawn_agent`) at Round 0 and dispatch
+  independent first-pass Finders. If `spawn_agent` is unavailable, run the same rounds as sequential
+  isolated passes, set `ran_as_sequential_fallback: true` in the round `coverage_log`, and STILL write
+  one `agents/<agent_id>.json` record per pass — the completion gate binds in fallback too.
+- **Spawn footgun:** `spawn_agent` REJECTS `fork_context: true` combined with an explicit `agent_type`.
+  For independent Round A contexts always pass `agent_type` with `fork_context: false` (or omit it);
+  never both. Canonical call: `spawn_agent(agent_type=<role>, fork_context=false, prompt=...)`.
+- Follow the canonical Concurrency Policy in `references/agent-roster.md` (12 open subagents, depth 1);
+  do not restate or override the numbers elsewhere.
+- Author ≠ skeptic ≠ judge across the generate/verify boundary (machine-checked).
+- **Discovery before verification:** each Finder returns multiple findings; at least one is
+  `depth: deep` (design / statistical-validity, not surface doc-vs-tree drift). Zero deep findings is a
+  coverage gap — the gate fails the run, it is not a clean bill.
+- Audit evidence before judging (model prose is not evidence); score every assembled packet — no
+  cherry-picking.
+- Verify proportionately: one confirmation pass for low-contestability binary facts; the
+  perspective-diverse falsifier/judge panel for contestable or high-stakes claims.
+- **Literature review is proactive, not opt-in.** If ANY claim depends on facts outside the repo —
+  novelty, prior-art, SOTA comparison, leakage/contamination, external dataset or pretraining-corpus
+  provenance — set `external_evidence_needed: yes` in the charter and dispatch a Literature Scout in
+  Round A (it retrieves via `scripts/fetch.py`). Never assert novelty / SOTA / leakage-safety from
+  local inspection alone. Be honest about reach: when no web tool reaches the network, log each such
+  claim as unverified (`coverage_log.external_verification_unavailable`) — never as checked. The gate
+  FAILS a run that declared `external_evidence_needed: yes` but produced neither a `source-record` nor
+  an unavailable-log.
+- Stop at a user checkpoint (Round F) before contested protocol, dataset, baseline, metric, claim,
+  publication-readiness, or research-document edits.
+- Run 1 (Round 0→F) is READ-ONLY and ends at the implementation plan; never edit project files or roll
+  into implementation in the same run. Implementation is a separate, user-initiated Run 2.
+- Read-only roles stay read-only; give parallel writers disjoint ownership or isolated worktrees.
 - Preserve user configuration and existing project instructions.
 
-## Mode Router
+## Workspace — one layout, always
 
-1. **Mode 0 - Lightweight reconnaissance**: ordinary repo reading, a narrow question, small bugfix, localized code review, CI/test/lint repair, or unfamiliar repo orientation. Inspect relevant files, run minimal validation, and avoid research bureaucracy.
-2. **Mode 1 - Standard research**: tasks affecting experiments, baselines, metrics, leakage, data definitions, result tables, reviewer-facing claims, or research documentation without an explicit full-panel request. Write a short Task Charter, use bounded evidence checks, and create an Experiment Card for costly or claim-producing work.
-3. **Mode 2 - Full adversarial**: explicit requests for adversarial, red-team, full-agent, multi-agent, research-team, multiple agents, 对抗模式, 多 Agent, 多智能体, or equivalent. Load `references/full-adversarial-workflow.md` and run Round 0 through Round F (Round G only after user approval).
-4. **Mode 3 - Product-build**: only when the user explicitly authorizes the standalone `research-team` product or changes `allow_product_build` to true. Load `references/product-build-spec.md`; otherwise reject product scaffolding and stay skill-first.
+Create every run with `python3 scripts/create_run_workspace.py` (it materializes the canonical tree
+including `agents/` and `writers/`). Never hand-roll a folder and never invent ad-hoc result files
+(no `agentic_synthesis.md`, no improvised structure): the canonical tree — `00-charter.yaml`,
+`01-dispatch-plan.yaml`, `round-a-findings/`, `round-b-critiques/`, `round-c-evidence-decisions.yaml`,
+`evidence-packets/`, `round-d-judge-scores/`, `round-e-decision-ledger.yaml`,
+`round-f-user-checkpoint.{yaml,md}`, `round-g-final-report.{yaml,md}`, `agents/<id>.json`,
+`progress-snapshots/` — is the ONLY layout the completion gate accepts. Use
+`.research-workflow/runs/<run_id>/` unless the project has an established location.
 
-Cross-cutting task shapes (pick a mode above, then load the matching reference):
+## The workflow (Run 1 = Round 0→F plan; Run 2 = Round G)
 
-- **Code review / PR / diff review** — load `references/code-review.md`. A small localized review is Mode 0; a full adversarial review of a risky diff is Mode 2 pointed at the diff. Reuses the Finding→Critique→Tribunal→Judge substrate with code lenses; never a parallel mechanism.
-- **Web / literature research** — load `references/web-research.md`. Opt-in; the Literature Scout retrieves with `scripts/fetch.py` (or a verified native web tool) and produces `source-record` evidence. Absent a web tool, external-dependent claims are logged as gaps, never faked.
+Load references LAZILY — pull each one at the round that needs it, not all up front (front-loading the
+whole library before any research is itself a stall risk). To START, load only
+`references/full-adversarial-workflow.md` (rounds + phase shapes) and `references/team-runbook.md`
+(dispatch script, judge aggregation, stop conditions). Then, on demand: `references/agent-roster.md`
+(roster + Concurrency Policy + deep-insight lens) and `references/role-dispatch-templates.md` (subagent
+prompts) when you actually dispatch; `references/artifact-contracts.md` when you write an artifact;
+`references/worktrees-and-artifacts.md` only in Run 2; `references/experiment-card.md` +
+`references/experiment-gates.md` only before an experiment/baseline/result-table; `references/loop-guard.md`
+only when work repeats. For a PR/diff review, record base/head SHAs in the charter and point Finders at
+the diff with correctness/security/perf lenses — same 0→G substrate split across the two runs.
 
-Negative routing:
+1. **Round 0** — Task Charter + relevance gate; no decision link → `REJECT`/`PARK`, no fan-out.
+2. **Round A** (barrier) — independent first-pass Finders → `round-a-findings-index.yaml`; ≥1
+   `depth: deep`; loop-until-dry, dedup against all SEEN.
+3. **Round B** (pipeline) — anonymous cross-falsification, routed by contestability.
+4. **Round C** (pipeline) — Evidence Tribunal returns decisions; the Orchestrator assembles
+   `evidence-packets/` only from accepted/partially-supported decisions.
+5. **Round D** (barrier) — independent judge panel; synthesize from the winner, graft runner-up
+   blockers; every assembled packet scored.
+6. **Round E** — decision ledger: exactly one class (`accepted_blocker` / `accepted_non_blocking` /
+   `rejected_or_unsupported` / `needs_user_decision`) and one action per issue.
+7. **Round F** — write the detailed `round-f-implementation-plan.{yaml,md}`, present the user
+   checkpoint, and **STOP** (Run 1 ends here). The plan is the deliverable.
+8. **Round G** — implementation, verification, documentation. This is **Run 2**: a SEPARATE,
+   user-initiated invocation that loads the approved plan and executes its `ordered_steps`. Never
+   auto-continued from Run 1.
 
-- An unfamiliar repository alone does not trigger full adversarial mode.
-- A request to audit documents does not authorize editing them.
-- A large role roster does not authorize instantiating the full 18-worker roster simultaneously; the 12-open cap binds regardless of roster size.
-- Majority vote never overrides failed tests, invalid evidence, leakage, or protocol mutation.
+## Artifact discipline and the Completion Gate
 
-Load `references/modes.md` when routing is ambiguous.
+Every material claim needs at least one accepted evidence record (file path + location, command +
+output, dataset statistic + reproduction command, source + retrieval date + support location, artifact
+path + hash, or test/experiment invocation). Validate each worker artifact against its contract —
+`python3 scripts/validate_artifacts.py --artifact <path> --type <schema>` — and reject + redispatch on
+failure (at most twice, then record `status: failed` and log the exclusion). `scripts/schemas.py` is
+the single source of truth the validator and generator share.
 
-## Standard Research Loop
+**COMPLETION GATE (non-negotiable).** Before writing ANY final answer, run
 
-For Mode 1:
+```
+python3 scripts/validate_artifacts.py --audit-run .research-workflow/runs/<run_id>/
+```
 
-1. Inspect project context, run commands, relevant docs, schemas, and risky assumptions.
-2. Write a compact Task Charter: objective, decision to support, scope, non-goals, success criteria, evidence needed, validation, and checkpoint needs.
-3. Apply the Decision Link and importance gate before extended work.
-4. Implement or audit in small slices.
-5. Run the smallest meaningful validation.
-6. Separate accepted evidence, unsupported claims, residual risk, and next decision.
+If it does not exit 0, the run is NOT done — fix or redispatch; do not narrate a result. The gate
+fails on: missing/too-few `agents/<id>.json` spawn records, an artifact not traceable to a spawn, zero
+deep findings, a single-judge (non-panel) Round D or duplicate-lens co-judges, dangling
+cross-references, an anonymization leak, an unjudged evidence packet, an edit-before-approval, or a
+plan run that contains a Round-G report (a fused run). Record the gate result where the run actually
+ends: **Run 1** puts the `OK:` line + `audit_run_ok: true` + `audit_run_command` in
+`round-f-implementation-plan.{yaml,md}` (it has no Round-G report); **Run 2** puts them in
+`round-g-final-report.{yaml,md}`. Run `python3 scripts/selftest.py` (one command) to confirm the
+harness itself still catches its negative controls.
 
-Load `references/experiment-card.md` before experiments, baseline comparisons, paper claims, costly implementation, or result-table work. Load `references/loop-guard.md` when work repeats or stops changing decision readiness.
+## Coding ownership
 
-## Full Adversarial Protocol
+Express each writer's ownership as a `dispatches[]` entry in `01-dispatch-plan.yaml` (`role`,
+`permissions`, `files_owned`, `files_forbidden`, `validation`, `required_output_schema`). The validator
+rejects a read-only role that carries write permissions or owned files. Serialize shared contracts
+(schemas, metrics, coordinate systems, configs, public APIs, result aggregators, protocol definitions).
+Give each parallel writer an isolated workspace: a git worktree for a real repo, else a disjoint locked
+directory under `runs/<run_id>/writers/<worker_id>/` (`scripts/create_run_workspace.py --writers N`).
+Read-only roles get no writer directory. See `references/worktrees-and-artifacts.md`.
 
-For Mode 2, load these references:
+## Completion criteria
 
-- `references/full-adversarial-workflow.md` for Round 0 through Round G.
-- `references/team-runbook.md` for the complete research-team operating procedure.
-- `references/agent-roster.md` for role contracts and dispatch.
-- `references/role-dispatch-templates.md` when assigning subagents or sequential isolated passes.
-- `references/artifact-contracts.md` for artifact schemas and templates.
-- `references/experiment-card.md` for preregistered experiments.
-- `references/loop-guard.md` for stagnation and repair-loop termination.
-- `references/worktrees-and-artifacts.md` for write isolation and reportable evidence.
-- `references/code-review.md` when the run is a PR/diff review rather than a research audit.
-- `references/web-research.md` when a finding needs an external fact (leakage, prior-art, SOTA).
+**Run 1 (the default) ends with the plan.** The final response reports: the implementation plan
+(`round-f-implementation-plan.{yaml,md}`) and its ordered steps; roles / subagents actually spawned
+(list the `agent_id`s, or state the sequential fallback); the `--audit-run` `OK:` line; evidence
+accepted, downgraded, or rejected; experiments parked or gated; user decisions required at the
+checkpoint; claims still unsupported; residual risk and the next action. "Files changed" is **N/A** —
+Run 1 is read-only. Then STOP and hand the plan to the user.
 
-Round summary:
+**Run 2 (implementation) ends with the result.** It additionally reports files changed and why,
+validation commands and results, and the final report (`round-g-final-report.{yaml,md}`).
 
-1. Round 0: Task Charter and relevance gate.
-2. Round A: independent findings or hypotheses with isolated first-pass contexts.
-3. Round B: anonymous cross-falsification.
-4. Round C: Evidence Tribunal.
-5. Round D: independent Judge Panel.
-6. Round E: Orchestrator decision ledger with `accepted_blocker`, `accepted_non_blocking`, `rejected_or_unsupported`, or `needs_user_decision`.
-7. Round F: user checkpoint; stop here when decisions or protected edits are required.
-8. Round G: approved implementation, verification, and documentation only after user approval.
-
-Execution path: full adversarial mode already requires an explicit multi-agent request, so DEFAULT to real `multi_agent_v1` subagents (`spawn_agent` / `wait_agent` / `send_input` / `close_agent`) for fan-out. Probe availability once at Round 0; if `spawn_agent` is unavailable, fall back to sequential artifact-producing passes that preserve role separation, and set `ran_as_sequential_fallback: true` in the round summary `coverage_log` (no silent downgrade). Communication stays Orchestrator-mediated (depth 1, 12-open cap) unless verified peer-to-peer support exists.
-
-## Artifact Discipline
-
-For full adversarial runs, write or maintain inspectable artifacts rather than relying only on chat history. Use `.research-workflow/runs/<run_id>/` for transient run workspaces unless the project has an established location.
-
-Every material claim must have at least one accepted evidence record: file path and location, command and output summary, dataset statistic plus reproduction command, source with retrieval date and support location, artifact path plus hash, or test/experiment invocation.
-
-Use templates under `assets/templates/` when creating artifacts. Validate every worker artifact against its contract before acting on it — `scripts/validate_artifacts.py --artifact <path> --type <schema>` — and reject + redispatch on failure (at most twice, then record `status: failed` and log the exclusion). `scripts/schemas.py` is the single source of truth the validator and generator share. For offline verification of the complete team loop, run `scripts/run_synthetic_fixture.py` and validate the generated run root with `--run-root`. `scripts/selftest.py` is the one-command self-test: it generates the fixture, validates it (exit 0), then asserts the validator catches a dropped required key, a dangling reference, an anonymization leak, and an edit-before-approval — proving the harness enforces schema, cross-artifact references, anonymization, and the checkpoint gate.
-
-## Coding Ownership
-
-Before parallel write work, express each worker's ownership as a `dispatches[]` entry in
-`01-dispatch-plan.yaml` (`role`, `permissions`, `files_owned`, `files_forbidden`, `validation`, and
-`required_output_schema` as the expected output) — a single producer, so ownership never drifts across
-files. `scripts/validate_artifacts.py` rejects a read-only role that carries write permissions or owned
-files.
-
-Serialize shared contracts such as schemas, metrics, coordinate systems, configs, public APIs, state machines, result aggregators, and research protocol definitions.
-
-Give each parallel writer an isolated workspace: a git worktree when the run targets a real repo, else a disjoint locked directory under `runs/<run_id>/writers/<worker_id>/` (`scripts/create_run_workspace.py --writers N`); read-only roles get no writer directory. See `references/worktrees-and-artifacts.md`.
-
-## Completion Criteria
-
-Final responses for research work must report:
-
-1. mode used and roles/subagents used;
-2. files changed and why;
-3. validation commands and results;
-4. evidence accepted, downgraded, or rejected;
-5. experiments rejected, parked, or gated;
-6. user decisions required;
-7. claims still unsupported;
-8. residual risk and next highest-value action.
-
-Never claim an implementation, validation, or forward test succeeded without a command, artifact, or file path that demonstrates it.
+Never claim an implementation, validation, or forward test succeeded without a command, artifact, or
+file path that demonstrates it. Use Chinese for the user-facing synthesis; keep artifact field names in
+English.

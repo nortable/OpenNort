@@ -8,6 +8,6 @@
   "minimal_test_to_resolve": "",
   "expected_decision_impact": "",
   "verdict": "unsupported_attack",
-  "refute_disposition": "uncertain",
+  "refute_disposition": "refuted",
   "lens": ""
 }

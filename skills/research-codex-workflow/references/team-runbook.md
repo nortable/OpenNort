@@ -1,10 +1,12 @@
 # Adversarial Research Team Runbook
 
-Load this file for full adversarial mode when the user wants a complete research team rather than a
-single audit pass.
+> Reminder: this is the METHOD, not the SUBJECT. Spend effort on the user's research and the plan —
+> dispatch Finders, gather evidence — not on auditing or narrating this workflow. Run the validator
+> once at the end.
 
-The team is orchestrator-mediated: the root Codex Orchestrator schedules roles, anonymizes artifacts,
-integrates evidence, and asks the user for decisions. Subagents do not own final truth.
+The authoritative operating procedure for the one workflow. The team is orchestrator-mediated: the root
+Codex Orchestrator schedules roles, anonymizes artifacts, integrates evidence, and asks the user for
+decisions. Subagents do not own final truth.
 
 ## Team State
 
@@ -19,9 +21,10 @@ Maintain these artifacts for every full run:
 6. `round-d-judge-scores/*.yaml` - independent judge scores.
 7. `round-e-decision-ledger.yaml` - Orchestrator decisions and actions.
 8. `round-f-user-checkpoint.md` - smallest blocking user decision set.
-9. `progress-snapshots/*.yaml` - Loop Guard snapshots.
-10. `agents/<agent_id>.json` - one retained debug record per dispatched subagent (role, round, status, output path, raw output) for replay and upgrades.
-11. `round-g-final-report.yaml` and `round-g-final-report.md` - only after approved implementation or documentation.
+9. `round-f-implementation-plan.{yaml,md}` - the Run 1 deliverable: the detailed literature-backed plan (Run 2 loads this).
+10. `progress-snapshots/*.yaml` - Loop Guard snapshots.
+11. `agents/<agent_id>.json` - one retained debug record per dispatched subagent (role, round, status, output path, raw output) for replay and upgrades.
+12. `round-g-final-report.yaml` and `round-g-final-report.md` - Run 2 only, after approved implementation or documentation.
 
 ## Round Owners (role lookup)
 
@@ -30,14 +33,14 @@ machine-readable shapes live in `01-dispatch-plan.yaml` `dispatch_groups[]`. All
 
 | Round | Shape | Sync | Owner | Required roles | Output gate |
 |---|---|---|---|---|---|
-| 0 Charter | gate | local | Orchestrator | Research Director, Relevance Arbiter when needed | task has a decision link |
-| A Independent findings | Understand | barrier | Orchestrator | 3-6 scouts/auditors/generators | first-pass outputs isolated into an index |
-| B Cross-falsification | Find->Verify | pipeline | Orchestrator | Falsifier, Methodologist, Relevance Arbiter | critiques target anonymized IDs |
+| 0 Charter | gate | local | Orchestrator | Orchestrator (charter + relevance gate) | task has a decision link |
+| A Independent findings | Understand | barrier | Orchestrator | 3-6 Finders (distinct lenses, ≥1 deep) | first-pass outputs isolated into an index |
+| B Cross-falsification | Find->Verify | pipeline | Orchestrator | Falsifier | critiques target anonymized IDs |
 | C Evidence Tribunal | Find->Verify | pipeline | Orchestrator (assembles packets from Evidence Auditor decisions) | Evidence Auditor, optional second auditor | unsupported claims downgraded |
 | D Judge Panel | judge panel | barrier | Orchestrator | 2-3 Judges | judges see accepted packets only |
-| E Decision ledger | synthesize | local | Orchestrator | Loop Guard when work repeats | every issue has one class |
-| F User checkpoint | gate | local | Orchestrator | none | stop before contested edits |
-| G Approved action | implementation incl. Migrate | per-site pipeline | Orchestrator | Experiment Engineer, Test Reviewer, Integrator | validation passes or claim downgraded |
+| E Decision ledger | synthesize | local | Orchestrator | Orchestrator (loop-guard/stop-rule inline) | every issue has one class |
+| F User checkpoint | gate | local | Orchestrator | Completeness Critic before the checkpoint | stop before contested edits |
+| G Approved action | implementation incl. Migrate | per-site pipeline | Orchestrator | on-demand Implementer, Test Reviewer | validation passes or claim downgraded |
 
 ## Dispatch Script (deterministic order)
 
@@ -58,9 +61,11 @@ and the Orchestrator Algorithm below is per-step detail. Until `01-dispatch-plan
    Keep in-flight fan-out within the 12-open cap; queue the remainder.
 4. Round D (**barrier**): `wait_agent` on all judge scores, then synthesize from the winning pass.
 5. Round E (local): write the decision ledger (one class + action per issue).
-6. Round F (local): stop before contested edits; present the smallest blocking decision set.
-7. Round G (per-site pipeline, only after approval): transform each site in isolation, verify as it
-   lands; rerun the Evidence Tribunal, update the ledger, and write the final report as global steps.
+6. Round F (local): write `round-f-implementation-plan.{yaml,md}`, present the smallest blocking
+   decision set, and STOP — **Run 1 ends here** (read-only; no project edits).
+7. Round G = **Run 2**, a SEPARATE user-initiated run (per-site pipeline, only after the user asks to
+   implement the approved plan): load the plan, transform each site in isolation, verify as it lands;
+   rerun the Evidence Tribunal, update the ledger, and write the final report as global steps.
 
 ## Loop-Until-Dry (Orchestrator-owned)
 
@@ -83,78 +88,28 @@ because discovery was exhausted" is auditable and distinct from "we stopped afte
 Discovery effort is the budget that matters most: spend agents finding more (and deeper) before
 spending them re-judging the few you have.
 
-## Mode-Specific Team Shapes
+## Team Shaping
 
-Use the smallest complete team for the job.
+One team shape, scaled by the task. Dispatch 3-6 **Finders** with distinct lenses (always include the
+deep-insight lens), then **Falsifier** → **Evidence Auditor** → 2-3 **Judges**, with a **Completeness
+Critic** before Round F. Pick the lenses to fit the job:
 
-### Documentation or Claim Audit
-
-- Data Auditor;
-- Baseline Auditor;
-- Methodologist **(runs the deep-insight lens: power/MDE, resampling unit & effective-N, leakage,
-  endpoint definition, confirmatory-vs-exploratory structure — not just doc-vs-tree drift)**;
-- Code Red-Team;
-- Claim Auditor;
-- Relevance Arbiter;
-- Falsifier;
-- Evidence Auditor;
-- 2 Judges.
+- **Documentation / claim audit** — data, baseline, claim, code-red-team, and deep-insight lenses.
+- **Open literature / design research** — Finders as Literature Scouts (distinct source strategies via
+  `scripts/fetch.py`) plus hypothesis lenses including a null hypothesis.
+- **Experiment planning** — data and deep-insight lenses; do not instantiate the Round G Implementer
+  until an Experiment Card passes the relevance and method gates.
+- **PR / diff review** — record base/head SHAs in the charter and point Finders at the diff with
+  correctness, security, performance, and tests/compatibility lenses. Same 0→G substrate, split across
+  the two runs (review/plan in Run 1; apply fixes in Run 2).
 
 Route Round B by contestability (see `full-adversarial-workflow.md` "Proportionate verification"):
-the doc-vs-tree existence findings from Data/Baseline/Code/Claim auditors are mostly
-`contestability: low` → light confirmation pass; reserve the multi-lens Falsifier panel for the
-Methodologist's deep statistical-validity findings, where a wrong call actually costs something.
-
-### Code Review (PR / diff review)
-
-Load `references/code-review.md`. Reuses the full Round 0→G substrate pointed at a diff; record
-base/head SHAs in the charter.
-
-- Correctness/bug finder;
-- Security finder;
-- Performance or Reuse/Simplification finder (by diff risk);
-- Tests/regressions + API/compatibility finder;
-- Falsifier (adversarial route, with a reproducing test as `minimal_test_to_resolve`);
-- Evidence Auditor;
-- 2 Judges.
-
-Route Round B by contestability: an obvious bug that reproduces trivially is `contestability: low` →
-one light confirmation; a subtle race/edge case is `medium|high` → adversarial panel, refuted-by-
-default unless the buggy path is shown reachable. Ledger classes map to merge gates: `accepted_blocker`
-= must-fix-before-merge, `accepted_non_blocking` = nit, `rejected_or_unsupported` = false positive,
-`needs_user_decision` = author's design call. Stop at Round F before editing the author's code; apply
-approved fixes (each with a test that proves it) in isolated worktrees at Round G.
-
-### Open Literature or Design Research
-
-- 2-4 Literature Scouts with distinct source strategies;
-- 2-3 Hypothesis Generators including a null hypothesis;
-- Falsifier;
-- Methodologist;
-- Relevance Arbiter;
-- Evidence Auditor;
-- 2 Judges.
-
-### Experiment Planning
-
-- Research Director;
-- Relevance Arbiter;
-- Methodologist;
-- Data Auditor;
-- Falsifier;
-- Evidence Auditor;
-- Loop Guard.
-
-Do not assign Experiment Engineer until an Experiment Card passes relevance and method gates.
-
-### Implementation After Approval
-
-- Orchestrator;
-- Experiment Engineer or implementation worker;
-- Test Reviewer;
-- Evidence Auditor;
-- Integrator;
-- Loop Guard when a repair repeats.
+doc-vs-tree existence findings are mostly `contestability: low` → one light confirmation pass; reserve
+the multi-lens Falsifier panel for deep statistical-validity findings (or, for code review, subtle
+race/edge cases), where a wrong call actually costs something. For a diff review, ledger classes map to
+merge gates: `accepted_blocker` = must-fix, `accepted_non_blocking` = nit, `rejected_or_unsupported` =
+false positive, `needs_user_decision` = author's design call; apply approved fixes (each with a proving
+test) in isolated worktrees at Round G.
 
 ## Orchestrator Algorithm
 
@@ -177,8 +132,16 @@ Do not assign Experiment Engineer until an Experiment Card passes relevance and 
 12. Aggregate without majority-overriding hard evidence failures.
 13. Write Round E decision ledger.
 14. Run Loop Guard snapshot.
-15. Stop at Round F if any issue needs user decision or protected edits.
-16. Start Round G only after user approval.
+15. Round F: write the implementation plan, present the checkpoint, and STOP — Run 1 ends here (no
+    project edits).
+16. Round G is Run 2: a SEPARATE, user-initiated run that loads the approved plan; never auto-started
+    from Run 1.
+17. **Completion gate (before any final answer).** Run
+    `python3 scripts/validate_artifacts.py --audit-run .research-workflow/runs/<run_id>/`. If it does
+    not exit 0 the run is NOT complete — fix or redispatch; do not narrate a result. Record the exit
+    code, the `agents/*.json` spawn count, and the `OK:` line in `round-g-final-report.{yaml,md}`
+    (`audit_run_ok`, `audit_run_command`). A single-context synthesis that skipped the rounds cannot
+    pass this gate.
 
 ## Dispatch Group Shapes (barrier vs pipeline)
 
@@ -215,12 +178,16 @@ Judges are not voters over facts. Apply this order:
 4. Median class can decide only when evidence packets are accepted and hard gates pass.
 5. Budget exhaustion -> honest partial report.
 6. When passes are accepted and hard gates pass, synthesize from the winning pass and graft
-   runner-up blockers and `hard_gate_failures` rather than discarding them.
+   runner-up blockers and `hard_gate_failures` rather than discarding them. Record the synthesis in the
+   final report's `judge_synthesis` field (winning packet, per-packet judges + lenses, chosen median,
+   `grafted_from`).
 
-Coverage precondition: before aggregating, every assembled `evidence-packets/*.yaml` must carry at
-least one judge score — judges split the packets, they do not score only the single "most important"
-one and leave the rest to be promoted unscored. `validate_artifacts.py` rejects a run with any unjudged
-packet (`validate_judge_coverage`).
+Panel + coverage precondition: whenever any packet is assembled, Round D must be a real PANEL — **≥2
+distinct judge `agent_id`s** (a single judge has no winner to synthesize from) — and every assembled
+`evidence-packets/*.yaml` must carry at least one judge score; co-judges scoring the same packet must
+carry DISTINCT emphasis lenses. Judges split the packets, they do not score only the single "most
+important" one and leave the rest promoted unscored. `validate_artifacts.py` (`validate_judge_coverage`)
+rejects a run that has one judge, an unjudged packet, or duplicate-lens co-judges.
 
 ## User-Facing Language
 

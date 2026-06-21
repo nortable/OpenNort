@@ -1,0 +1,50 @@
+{
+  "run_id": "synthetic-run",
+  "objective": "Apply the accepted blocker before trusting the protocol claim.",
+  "decision_link": "Resolves whether the evidence-backed blocker changes the protocol decision.",
+  "approach": "Adopt the winning judge pass; address the accepted blocker; defer the contested protocol choice to the user. Read-only until Run 2 is approved.",
+  "alternatives_considered": [
+    "proceed without fixing the blocker (rejected: evidence-backed)"
+  ],
+  "literature_summary": "Local-only synthetic case; external_evidence_needed=no, so no source retrieval was required.",
+  "change_list": [
+    {
+      "path": "<target_file>",
+      "change": "address accepted blocker F-VALID-BLOCKER-1",
+      "owner": "Run 2 Implementer"
+    }
+  ],
+  "experiment_card_ids": [],
+  "ordered_steps": [
+    "Run 2 step 1: get user decision on the contested protocol choice (Round F checkpoint).",
+    "Run 2 step 2: implement the accepted blocker fix in an isolated worktree.",
+    "Run 2 step 3: rerun the Evidence Tribunal on the new result and update the ledger."
+  ],
+  "validation_strategy": "Each step verified as it lands; final --audit-run must exit 0.",
+  "risks": [
+    "This is a synthetic fixture, not a live repository."
+  ],
+  "open_decisions": [
+    "Contested protocol choice (needs_user_decision)."
+  ],
+  "audit_run_ok": true,
+  "audit_run_command": "python3 scripts/validate_artifacts.py --audit-run ../../examples/synthetic-run",
+  "judge_synthesis": {
+    "winning_packet": "P-F-VALID-BLOCKER-1",
+    "per_packet": [
+      {
+        "packet_id": "P-F-VALID-BLOCKER-1",
+        "judges": [
+          "D-JUDGE-1",
+          "D-JUDGE-2"
+        ],
+        "lenses": [
+          "decision-impact",
+          "methodology"
+        ],
+        "chosen_median": "accepted_blocker"
+      }
+    ],
+    "grafted_from": []
+  }
+}

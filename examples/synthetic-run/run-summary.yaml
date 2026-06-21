@@ -1,6 +1,6 @@
 {
-  "run_id": "synthetic-v2-complete-team",
-  "run_root": "~/.codex/research-workflow-runs/synthetic-v2-complete-team",
+  "run_id": "synthetic-run",
+  "run_root": "../../examples/synthetic-run",
   "accepted_blockers": 1,
   "rejected_or_unsupported": 2,
   "needs_user_decision": 1,

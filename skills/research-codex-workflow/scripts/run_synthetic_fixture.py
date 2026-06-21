@@ -158,6 +158,8 @@ def run_fixture(fixture_path: Path, out_root: Path, run_id: str | None = None) -
         "budget_or_cost_constraints": "offline only",
         "user_checkpoint_required": "yes",
         "edit_permission_before_checkpoint": "no",
+        "external_evidence_needed": "no",
+        "run_mode": "plan",
     }
     write_artifact(root / "00-charter.yaml", charter, "task-charter")
 
@@ -177,7 +179,7 @@ def run_fixture(fixture_path: Path, out_root: Path, run_id: str | None = None) -
         ],
         "_doc": "dispatch_kind: barrier = wait_agent on ALL members before the next group; pipeline = stream each finding to the next stage as it lands (A->B->C). Orchestrator owns group sequencing.",
         "budget_tier": "standard",
-        "agent_count_backstop": 18,
+        "agent_count_backstop": 8,
         "stop_rule": {"max_rounds": 8, "loop_until_dry_K": 2, "token_budget_target": None, "dedup_against": "all_seen"},
         "max_concurrent_subagents": 12,
         "max_subagent_depth": 1,
@@ -236,24 +238,29 @@ def run_fixture(fixture_path: Path, out_root: Path, run_id: str | None = None) -
         packet_sources.append((packet, raw))
         write_artifact(root / "evidence-packets" / f"{packet['packet_id']}.yaml", packet, "evidence-packet")
 
-    for idx, (packet, raw) in enumerate(packet_sources, 1):
-        score = {
-            "packet_id": packet["packet_id"],
-            "judge_id": f"J{idx}",
-            "agent_id": f"D-JUDGE-{idx}",
-            "blocker_score": 5,
-            "warning_score": 1,
-            "false_positive_risk": 1,
-            "decision_relevance": 5,
-            "evidence_quality": 5,
-            "technical_validity": 5,
-            "methodological_validity": 4,
-            "reproducibility": 4,
-            "final_class": raw.get("expected_decision_class", "accepted_non_blocking"),
-            "hard_gate_failures": [],
-            "rationale": "Accepted evidence supports a blocker and unsupported critique was excluded.",
-        }
-        write_artifact(root / "round-d-judge-scores" / f"{score['judge_id']}-{packet['packet_id']}.yaml", score, "judge-score")
+    # A real panel: every assembled packet is scored by >=2 independent judges with DISTINCT emphasis
+    # lenses, so synthesize-from-winner has a winner to choose and the perspective-diverse rule holds.
+    JUDGES = [("J1", "D-JUDGE-1", "decision-impact"), ("J2", "D-JUDGE-2", "methodology")]
+    for packet, raw in packet_sources:
+        for judge_id, judge_agent, lens in JUDGES:
+            score = {
+                "packet_id": packet["packet_id"],
+                "judge_id": judge_id,
+                "agent_id": judge_agent,
+                "lens": lens,
+                "blocker_score": 5,
+                "warning_score": 1,
+                "false_positive_risk": 1,
+                "decision_relevance": 5,
+                "evidence_quality": 5,
+                "technical_validity": 5,
+                "methodological_validity": 4,
+                "reproducibility": 4,
+                "final_class": raw.get("expected_decision_class", "accepted_non_blocking"),
+                "hard_gate_failures": [],
+                "rationale": f"({lens} lens) accepted evidence supports a blocker; unsupported critique excluded.",
+            }
+            write_artifact(root / "round-d-judge-scores" / f"{judge_id}-{packet['packet_id']}.yaml", score, "judge-score")
 
     decisions = [decision_for(item) for item in fixture["round_a_findings"]]
     decisions.append({
@@ -295,6 +302,54 @@ def run_fixture(fixture_path: Path, out_root: Path, run_id: str | None = None) -
         "- Stop condition: do not edit protected research documents.\n",
     )
 
+    # Round F deliverable: the literature-backed implementation PLAN (Run 1's product). Run 2
+    # (implementation) is a SEPARATE invocation that loads this plan — never fused into this run.
+    plan = {
+        "run_id": rid,
+        "objective": "Apply the accepted blocker before trusting the protocol claim.",
+        "decision_link": "Resolves whether the evidence-backed blocker changes the protocol decision.",
+        "approach": "Adopt the winning judge pass; address the accepted blocker; defer the contested "
+                    "protocol choice to the user. Read-only until Run 2 is approved.",
+        "alternatives_considered": ["proceed without fixing the blocker (rejected: evidence-backed)"],
+        "literature_summary": "Local-only synthetic case; external_evidence_needed=no, so no source "
+                              "retrieval was required.",
+        "change_list": [
+            {"path": "<target_file>", "change": "address accepted blocker F-VALID-BLOCKER-1",
+             "owner": "Run 2 Implementer"}
+        ],
+        "experiment_card_ids": [],
+        "ordered_steps": [
+            "Run 2 step 1: get user decision on the contested protocol choice (Round F checkpoint).",
+            "Run 2 step 2: implement the accepted blocker fix in an isolated worktree.",
+            "Run 2 step 3: rerun the Evidence Tribunal on the new result and update the ledger.",
+        ],
+        "validation_strategy": "Each step verified as it lands; final --audit-run must exit 0.",
+        "risks": ["This is a synthetic fixture, not a live repository."],
+        "open_decisions": ["Contested protocol choice (needs_user_decision)."],
+        # Run 1 records its completion-gate result + judge-panel synthesis here (it has no Round-G report).
+        "audit_run_ok": True,
+        "audit_run_command": f"python3 scripts/validate_artifacts.py --audit-run {root}",
+        "judge_synthesis": {
+            "winning_packet": packets[0]["packet_id"] if packets else None,
+            "per_packet": [
+                {"packet_id": p["packet_id"], "judges": ["D-JUDGE-1", "D-JUDGE-2"],
+                 "lenses": ["decision-impact", "methodology"], "chosen_median": "accepted_blocker"}
+                for p in packets
+            ],
+            "grafted_from": [],
+        },
+    }
+    write_artifact(root / "round-f-implementation-plan.yaml", plan, "implementation-plan")
+    write_text(
+        root / "round-f-implementation-plan.md",
+        "# Round F Implementation Plan (Run 1 deliverable)\n\n"
+        f"- Objective: {plan['objective']}\n"
+        f"- Approach: {plan['approach']}\n"
+        "- Ordered steps (executed by a SEPARATE Run 2, not this run):\n"
+        + "".join(f"  {i+1}. {s}\n" for i, s in enumerate(plan["ordered_steps"]))
+        + "- Open decisions: contested protocol choice (needs user decision).\n",
+    )
+
     snapshot = {
         "round": "E",
         "accepted_new_evidence_count": len(packets),
@@ -318,32 +373,9 @@ def run_fixture(fixture_path: Path, out_root: Path, run_id: str | None = None) -
     rejected_or_unsupported = sum(1 for d in decisions if d["decision_class"] == "rejected_or_unsupported")
     needs_user_decision = sum(1 for d in decisions if d["decision_class"] == "needs_user_decision")
 
-    final_report = {
-        "run_id": rid,
-        "mode": "full_adversarial",
-        "summary_zh": "离线合成用例通过：无关结论被停车，缺证 blocker 被降级，有证据 blocker 被接受，争议选择停在 Round F。",
-        "task_charter": charter,
-        "decision_ledger": decisions,
-        "accepted_evidence": packets,
-        "downgraded_or_rejected_claims": [d for d in evidence_decisions if d["support_status"] in {"needs_evidence", "unsupported"}],
-        "user_checkpoints": checkpoint["checkpoints"],
-        "validation": ["offline synthetic fixture"],
-        "protected_files_not_edited": True,
-        "residual_risks": ["This is a synthetic fixture, not a live repository audit."],
-        "next_highest_value_action": "Run a read-only forward test on a real research repository.",
-    }
-    write_artifact(root / "round-g-final-report.yaml", final_report, "final-report")
-    write_text(
-        root / "round-g-final-report.md",
-        "# Round G Final Report\n\n"
-        f"- Run: {rid}\n"
-        "- Mode: full_adversarial\n"
-        f"- Accepted blockers: {accepted_blockers}\n"
-        f"- Rejected or unsupported: {rejected_or_unsupported}\n"
-        f"- Needs user decision: {needs_user_decision}\n"
-        "- Protected files edited: no\n"
-        "- Next action: run a read-only forward test on a real research repository.\n",
-    )
+    # This fixture is a Run-1 PLAN run: it STOPS at Round F with the implementation plan and writes NO
+    # round-g-final-report (that is Run 2's deliverable). The validator's run-mode gate rejects a plan
+    # run that contains a Round-G report (a fused run).
 
     # Per-subagent debug records (retained for debugging / later upgrades). One JSON file per agent_id.
     agent_records = [
@@ -357,6 +389,9 @@ def run_fixture(fixture_path: Path, out_root: Path, run_id: str | None = None) -
          "status": "completed", "output_artifact_path": "round-c-evidence-decisions.yaml",
          "schema_validated": True, "redispatch_count": 0},
         {"agent_id": "D-JUDGE-1", "role": "Judge", "round": "D", "dispatch_kind": "barrier",
+         "status": "completed", "output_artifact_path": "round-d-judge-scores/",
+         "schema_validated": True, "redispatch_count": 0},
+        {"agent_id": "D-JUDGE-2", "role": "Judge", "round": "D", "dispatch_kind": "barrier",
          "status": "completed", "output_artifact_path": "round-d-judge-scores/",
          "schema_validated": True, "redispatch_count": 0},
     ]

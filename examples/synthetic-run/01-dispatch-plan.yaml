@@ -1,5 +1,5 @@
 {
-  "run_id": "synthetic-v2-complete-team",
+  "run_id": "synthetic-run",
   "dispatches": [
     {
       "role": "Synthetic Scout",
@@ -7,7 +7,7 @@
       "scope": "fixture",
       "non_goals": [],
       "inputs": [
-        "~/.codex/skills/research-codex-workflow/examples/synthetic-adversarial-case.yaml"
+        "/home/bwei0951/OpenNort/skills/research-codex-workflow/examples/synthetic-adversarial-case.yaml"
       ],
       "required_evidence": [
         "fixture evidence"
@@ -137,7 +137,7 @@
   ],
   "_doc": "dispatch_kind: barrier = wait_agent on ALL members before the next group; pipeline = stream each finding to the next stage as it lands (A->B->C). Orchestrator owns group sequencing.",
   "budget_tier": "standard",
-  "agent_count_backstop": 18,
+  "agent_count_backstop": 8,
   "stop_rule": {
     "max_rounds": 8,
     "loop_until_dry_K": 2,

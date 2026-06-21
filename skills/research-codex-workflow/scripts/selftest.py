@@ -4,7 +4,8 @@
 Generates the synthetic fixture, validates it (must pass), then applies a set of mutations and asserts
 the validator REJECTS each one. This proves the harness actually catches failures rather than passing
 everything (the original validator passed all of these). It only advertises guarantees the validator
-implements: schema conformance, cross-artifact references, anonymization, and the checkpoint gate.
+implements: schema conformance, cross-artifact references, anonymization, the checkpoint gate, judge
+coverage, the subagent-spawn completion gate, and the deep-discovery requirement.
 
 Usage: python3 scripts/selftest.py   (exit 0 = harness healthy)
 """
@@ -77,6 +78,48 @@ def unjudged_packet(run_root: Path) -> None:
     )
 
 
+def no_spawn_records(run_root: Path) -> None:
+    """Delete every agents/<id>.json spawn record. validate_spawn_evidence must reject the run — a
+    final answer with no proof any subagent ran is the core fake-run failure mode."""
+    for path in (run_root / "agents").glob("*.json"):
+        path.unlink()
+
+
+def shallow_pass_only(run_root: Path) -> None:
+    """Set every Round A finding to depth=surface (zero deep findings). The completion gate must reject
+    it — a surface-only pass audited the docs, not the research."""
+    for path in (run_root / "round-a-findings").glob("*.yaml"):
+        _patch(path, lambda d: d.__setitem__("depth", "surface"))
+
+
+def plan_run_with_round_g_report(run_root: Path) -> None:
+    """Add a Round-G final report to a plan run = a FUSED run. validate_run_mode_gate must reject it: a
+    plan run (run_mode=plan) must STOP at Round F and never produce Round-G output."""
+    report = {
+        "run_id": "fused", "mode": "adversarial", "summary_zh": "x", "decision_ledger": [],
+        "accepted_evidence": [], "user_checkpoints": [], "protected_files_not_edited": True,
+        "next_highest_value_action": "x",
+    }
+    (run_root / "round-g-final-report.yaml").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def external_evidence_declared_but_missing(run_root: Path) -> None:
+    """Charter declares external evidence is needed, but the run produced no source-record and logged
+    nothing unavailable. validate_external_evidence must reject it — a Literature Scout was promised and
+    never ran, so a SOTA/novelty/leakage claim would rest on local inspection alone."""
+    _patch(run_root / "00-charter.yaml",
+           lambda d: d.__setitem__("external_evidence_needed", "yes"))
+
+
+def single_judge_panel(run_root: Path) -> None:
+    """Delete the second judge's scores, leaving one judge per packet. validate_judge_coverage must
+    reject it — a one-judge "panel" cannot do synthesize-from-winner, so it is not the judge-panel
+    pattern the master template requires."""
+    for path in (run_root / "round-d-judge-scores").glob("J2-*.yaml"):
+        path.unlink()
+
+
 def ledger_issue_without_judged_packet(run_root: Path) -> None:
     """Append an accepted ledger issue that traces to NO judged packet (a second-discovery finding
     written straight to the ledger). validate_ledger_packet_coverage must reject it."""
@@ -97,6 +140,11 @@ NEGATIVE_CONTROLS = [
     ("edit_permission_before_approval = True", edit_before_approval),
     ("evidence packet with no judge score", unjudged_packet),
     ("accepted ledger issue with no judged packet", ledger_issue_without_judged_packet),
+    ("no subagent spawn records (faked run)", no_spawn_records),
+    ("surface-only discovery (zero deep findings)", shallow_pass_only),
+    ("single-judge round D (not a panel)", single_judge_panel),
+    ("external evidence declared but no literature run", external_evidence_declared_but_missing),
+    ("plan run fused with a Round-G report", plan_run_with_round_g_report),
 ]
 
 
@@ -124,7 +172,8 @@ def main() -> int:
             print(f"FAIL: {f}", file=sys.stderr)
         return 1
     print("OK: self-test passed — clean run validates and all negative controls are rejected "
-          "(schema + references + anonymization + checkpoint + judge-coverage enforced)")
+          "(schema + references + anonymization + checkpoint + judge-panel coverage + spawn-gate + "
+          "deep-discovery + plan/implement run-mode split enforced)")
     return 0
 
 

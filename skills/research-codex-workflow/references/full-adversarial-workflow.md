@@ -1,16 +1,26 @@
 # Full Adversarial Workflow Reference
 
-Load this file only for explicit full adversarial, multi-agent, red-team, or research-team mode.
+> Reminder: this is the METHOD, not the SUBJECT. Produce findings and the plan by dispatching real
+> subagents; do not sit and audit your own process. The validator is one final command, not an ongoing
+> activity.
 
-The workflow is Orchestrator-mediated. Subagents return bounded artifacts to the root Orchestrator.
-They do not directly debate one another unless the installed runtime has verified peer-to-peer
-agent-team support.
+This is the one workflow the skill runs (rounds 0→G), executed as TWO separate invocations: **Run 1 =
+Round 0→F** (research + plan; read-only; STOPS at the implementation plan) and **Run 2 = Round G** (a
+separate, user-initiated implementation pass). Never fuse them in one run. It is Orchestrator-mediated:
+subagents return bounded artifacts to the root Orchestrator and do not directly debate one another
+unless the installed runtime has verified peer-to-peer agent-team support.
 
-Execution path: this mode DEFAULTS to real `multi_agent_v1` subagents
+Execution path: DEFAULT to real `multi_agent_v1` subagents
 (`spawn_agent`/`wait_agent`/`send_input`/`close_agent`). The Orchestrator probes availability at
 Round 0; if `spawn_agent` is unavailable it falls back to sequential artifact-producing passes that
-preserve role separation and records `ran_as_sequential_fallback: true` in the coverage log. Either
+preserve role separation, records `ran_as_sequential_fallback: true` in the coverage log, and STILL
+writes one `agents/<agent_id>.json` record per pass (the completion gate binds in fallback too). Either
 way maximum depth is 1 and the 12-open concurrency cap binds.
+
+**Spawn footgun:** `multi_agent_v1` REJECTS `spawn_agent` when `fork_context: true` is combined with an
+explicit `agent_type`. Round A needs independent ISOLATED contexts, so the canonical call is
+`spawn_agent(agent_type=<role>, fork_context=false, prompt=...)` — pass `agent_type` with
+`fork_context` false/omitted, OR `fork_context: true` with no `agent_type`, never both.
 
 For a complete team run, also load `team-runbook.md` and `role-dispatch-templates.md`.
 
@@ -28,11 +38,58 @@ next stage as it lands. Maximum subagent depth stays 1 in every round.
 | C Evidence Tribunal | Find->Verify | pipeline | each finding streams to the Evidence Auditor; Orchestrator assembles packets |
 | D Judge Panel | judge panel | barrier | wait for every judge score, then synthesize from the winner |
 | E Decision ledger | synthesize (ledger) | local | one decision class + action per issue |
-| F User checkpoint | gate | local | smallest blocking decision set |
-| G Approved action | implementation incl. a Migrate stage | per-site pipeline | discover sites -> transform each in isolation -> verify as it lands |
+| F Plan + checkpoint | gate | local | write the implementation plan + smallest blocking decision set, then STOP (Run 1 ends) |
+| G Implementation (Run 2) | implementation incl. a Migrate stage | per-site pipeline | SEPARATE user-initiated run: load the plan, transform each site in isolation, verify as it lands |
 
 Rounds B and C are SEPARATE pipelined stages (not fused); Rounds A and D are barriers. The
 authoritative ordered procedure is the Dispatch Script in `team-runbook.md`.
+
+## Orchestration model (Codex translation of the Claude Code Workflow engine)
+
+This workflow is a deliberate translation of the Claude Code `Workflow` engine onto the Codex substrate
+(resident main agent + `multi_agent_v1`, depth 1, no JS runtime). The mapping:
+
+| Master template (the Workflow engine) | Codex round / mechanism |
+|---|---|
+| `parallel(thunks)` — barrier, await all | Round A and Round D (`wait_agent` on all members); Round G's tribunal-rerun / ledger / report |
+| `pipeline(items, …stages)` — per-item, no inter-stage barrier | Rounds A→B→C stream per finding; Round G per site |
+| `agent(prompt, {schema})` — validated structured output | one schema-conformant artifact per worker, checked by `validate_artifacts.py` + Orchestrator redispatch (≤2×) |
+| adversarial verify (N skeptics, default-refuted, majority) | Round B adversarial route: ≥3 perspective-diverse refuters, `refute_disposition` defaults to `refuted`; majority → DOWNGRADE into the Round C tribunal (NOT vote-kill — evidence adjudicates) |
+| perspective-diverse verify (distinct lenses) | Round B refuter lenses + Round D judge lenses (co-judges on a packet must differ) |
+| judge panel (N attempts, synth-from-winner, graft) | Round D ≥2-judge panel; synthesize-from-winner recorded in `judge_synthesis` |
+| loop-until-dry (dedup vs SEEN) | `stop_rule{loop_until_dry_K, dedup_against: all_seen}` |
+| multi-modal sweep | Round A Finder lens menu (data / baseline / claim / code / hypothesis / deep) |
+| completeness critic | Round E.5 Completeness Critic |
+| worktree isolation for parallel writers | `create_run_workspace --writers` (git worktree if a repo, else a WEAKER disjoint locked dir) |
+| `budget` token-scaled depth | coarse `budget_tier` fan-out ceilings (economy 2 / standard 4 / deep 6) |
+
+**Translation seams — where the substrate forces a divergence (stated honestly, not hidden):**
+
+1. **The Orchestrator IS the engine.** No JS runtime exists; the main Codex agent hand-executes
+   `parallel` (= `wait_agent` on ALL members) and `pipeline` (= stream each finding to its next stage as
+   it lands) via `spawn_agent`/`wait_agent`/`close_agent`. Workers never advance a group.
+2. **Depth-1 flattening of nested panels.** The engine's `parallel(findings.map(f => parallel(lenses)))`
+   is illegal at depth 1, so the Orchestrator spawns every (finding × lens) verifier ITSELF at depth 1
+   within the 12-open cap and reassembles per finding — a Falsifier never spawns judges. This is forced
+   by the `max_subagent_depth == 1` check, not a choice.
+3. **The validator IS the schema layer.** `agent({schema})` retries transparently at the tool layer;
+   Codex has no such layer, so the Orchestrator must explicitly validate each returned artifact
+   (`--artifact … --type …`) and redispatch the same worker with the error appended (≤2×, then
+   `status: failed` + log).
+4. **Round A is an ITERATED barrier, not a single one.** loop-until-dry re-spawns finder rounds that
+   interleave with findings already streaming through B/C — a shape the plain engine primitives do not
+   model. Each finder round is its own barrier (wait members, dedup vs ALL SEEN) before deciding whether
+   to re-spawn.
+5. **What the completion gate proves — and does not.** It HARD-fails on: <3 distinct completed spawn
+   records, missing generate(A)+verify(B/C/D) coverage, an artifact whose `agent_id` traces to no spawn
+   record, a one-judge "panel", duplicate-lens co-judges, zero `depth: deep` findings, dangling
+   references, an anonymization leak, an unjudged packet, or an edit-before-approval. It does NOT verify
+   that B/C actually STREAMED rather than ran as three barriers (`dispatch_kind: pipeline` is a declared
+   field plus an advisory warning, not a hard gate), and it cannot prove a real `multi_agent_v1` spawn
+   occurred — it proves that ≥3 internally-consistent, cross-referenced spawn RECORDS exist and every
+   artifact traces to one, which makes forging a green run strictly more expensive than running it.
+   Proportionate-verification and no-silent-caps are convention + non-blocking warnings; only the
+   zero-deep-findings subset is a hard failure.
 
 ## Round 0 - Charter and Relevance Gate
 
@@ -53,7 +110,14 @@ TaskCharter:
 - budget_or_cost_constraints:
 - user_checkpoint_required: yes|no|unknown
 - edit_permission_before_checkpoint: yes|no
+- external_evidence_needed: yes|no|unknown
 ```
+
+Decide `external_evidence_needed` deliberately: set **yes** if any claim depends on facts outside the
+repo (novelty, prior-art, SOTA comparison, leakage/contamination, external dataset or pretraining-corpus
+provenance). `yes` makes a Literature Scout MANDATORY in Round A; if no web tool reaches the network,
+every such claim is logged in `coverage_log.external_verification_unavailable`. The completion gate
+fails a `yes` charter that produced neither a `source-record` nor an unavailable-log.
 
 For each proposed task, create a Decision Link:
 
@@ -72,6 +136,8 @@ Gate rules:
 - only curiosity value -> use a small explicit exploration budget or park;
 - protocol, dataset, baseline, metric, or headline-claim change -> user checkpoint;
 - expensive work without a discriminating outcome -> reject or redesign;
+- a claim depends on external facts (novelty/prior-art/SOTA/leakage/provenance) ->
+  `external_evidence_needed: yes` and a Literature Scout is dispatched in Round A;
 - no full panel until the Orchestrator accepts the charter.
 
 ## Round A - Independent Findings and Candidate Hypotheses (Understand shape, barrier)
@@ -104,6 +170,13 @@ Typical open research roles:
 - Hypothesis Generators, including a null hypothesis;
 - Data or Methodology Auditor;
 - Relevance Arbiter.
+
+**Literature Scout is MANDATORY (not optional) when the charter set `external_evidence_needed: yes`** —
+or whenever a finding makes a novelty / prior-art / SOTA / leakage / provenance claim that local
+inspection cannot settle. Dispatch it as a Round A Finder lens that retrieves with `scripts/fetch.py`
+and emits `source-record` evidence. If no web tool reaches the network it is a no-op and every such
+claim is logged in `coverage_log.external_verification_unavailable` — proactively reach for it; do not
+wait to be asked.
 
 Every output uses the Finding contract from `artifact-contracts.md`. Findings are provisional until
 the Evidence Tribunal accepts them.
@@ -195,12 +268,15 @@ Rules:
 
 **External-evidence honesty.** Some claims can only be settled against facts OUTSIDE the repo — a
 public dataset's patient list (leakage), a prior-art or SOTA number, a pretraining-corpus provenance.
-The Evidence Auditor accepts the locally inspectable part and returns `needs_evidence` for the external
-part; the Orchestrator records it in `coverage_log.external_verification_unavailable[]` and as a
+The Literature Scout settles the external part with **Codex's native search + fetch/PDF tools** —
+reading the actual paper and quoting the exact equation / baseline+dataset+metric / provenance — and
+optionally pins a `content_sha256` via `scripts/fetch.py` for reproducibility. The Evidence Auditor
+accepts what the source actually supports and returns `needs_evidence` for anything still unread; the
+Orchestrator records the gap in `coverage_log.external_verification_unavailable[]` and as a
 `claim_unverified` Completeness gap, rather than letting a local-only check read as fully verified. If
-no web/fetch tool is configured, the Literature Scout is a no-op and EVERY external-dependent claim is
-logged this way — never silently treated as closed. (A pure local audit is legitimate; claiming it
-verified an external fact it could not reach is not.)
+no native web tool AND fetch.py can reach the network, the Literature Scout is a no-op and EVERY
+external-dependent claim is logged this way — never silently treated as closed. (A pure local audit is
+legitimate; claiming it verified an external fact it could not reach is not.)
 
 ## Round D - Independent Judge Panel
 
@@ -237,20 +313,22 @@ restate it. The panel adds three master-template elements on top of it:
 - **Perspective-diverse lenses**: give each judge a distinct emphasis lens — decision-impact,
   methodology, reproducibility — over the SAME rubric, with no cross-score visibility. Diverse lenses
   catch failure modes that identical passes miss.
-- **Score every assembled packet (coverage, not cherry-pick)**: each `evidence-packets/*.yaml` the
-  Orchestrator built must receive at least one judge score. A judge may NOT score only "the most
-  decision-critical" packet and leave the rest unscored while Round E still promotes them — that
-  silently rubber-stamps unjudged evidence. With 2-3 judges, split the packets across the panel so
-  every packet is covered (each can still carry its emphasis lens). `validate_artifacts.py` rejects a
-  run where any assembled packet has no Round D score. (Packets are only assembled from accepted /
+- **A real panel, not a single judge**: whenever any packet is assembled, Round D must have **≥2
+  distinct judge `agent_id`s** — `validate_artifacts.py` (`validate_judge_coverage`) FAILS a run with
+  one judge, because synthesize-from-winner has no winner to choose from a single pass. Every assembled
+  `evidence-packets/*.yaml` must still receive at least one score (a judge may NOT score only "the most
+  decision-critical" packet and leave the rest unscored). With 2-3 judges, split the packets across the
+  panel so every packet is covered; when two judges score the SAME packet their emphasis lenses must be
+  DISTINCT (the validator rejects duplicate-lens co-judges). (Packets are only assembled from accepted /
   partially_supported Round C decisions, so a Tribunal-rejected claim is never assembled and needs no
   score.)
 - **Synthesize from the winner**: adopt the highest-scoring accepted pass's `final_class` and
   rationale as the spine, then GRAFT any blocker, counterevidence, or `hard_gate_failures` entry a
-  runner-up raised that the winner omitted. Record every per-judge score, the chosen median, and each
-  grafted point; never silently drop a dissent. Where Round D scored multiple competing options,
-  record `grafted_from` provenance. (A partial panel still produces an honest partial report per the
-  budget-exhaustion rule — it is not silently disqualified.)
+  runner-up raised that the winner omitted. Record the synthesis in the final report's `judge_synthesis`
+  field — the winning packet, the per-packet judges and their lenses, the chosen median, and each
+  `grafted_from` runner-up point — so the graft is auditable and never a silent drop. (A partial panel
+  still produces an honest partial report per the budget-exhaustion rule — it is not silently
+  disqualified.)
 
 ## Round E - Orchestrator Decision Ledger and Action Gate
 
@@ -279,8 +357,7 @@ have produced none of the reviewed findings — do not fold it into the Relevanc
 which would recreate the same-role-generates-and-judges failure). It returns a `CompletenessCritique`
 asking "what is missing?" — a lens not run, a claim unverified, a source unread, a hypothesis
 untested. The Orchestrator must close every `must_close` gap or surface it verbatim in the Round F
-checkpoint (no silent proceed). Scope this to full adversarial mode; standard and lightweight modes do
-an inline Orchestrator coverage scan instead, honoring smallest-mode-that-fits.
+checkpoint (no silent proceed).
 
 ## Round F - User Checkpoint
 
@@ -313,15 +390,27 @@ UserCheckpoint:
 - consequence_of_no_decision:
 ```
 
-Ask only the smallest blocking set. If configured to stop at Round F, stop after presenting the
-checkpoint and do not edit affected files.
+Ask only the smallest blocking set. Stop after presenting the checkpoint and do not edit affected files.
 
-## Round G - Approved Implementation, Verification, and Documentation
+### Round F deliverable: the implementation plan (Run 1 ends here)
 
-Run only after user approval. Implementation incorporates a **Migrate shape**: discover the edit or
-experiment sites, then transform each in an isolated worktree or disjoint workspace as a per-site
-pipeline (verify each as it lands). The Evidence-Tribunal rerun, ledger update, and final report stay
-GLOBAL Orchestrator barrier steps, not per-site. Use the worktree/disjoint-directory rule in
+Round F also produces the run's actual product — a detailed, literature-backed
+`round-f-implementation-plan.{yaml,md}` (schema `implementation-plan`): `objective`, `approach` (the
+chosen design + alternatives considered), `literature_summary` (source-records, or what was logged
+unverified), a file-level `change_list`, `ordered_steps` (each a discrete task a Run-2 implementer can
+execute), `validation_strategy`, `risks`, and `open_decisions`. Then **STOP** — Run 1 (Research & Plan)
+is read-only and ends here; hand the plan and the checkpoint to the user. Do NOT roll forward into
+implementation in the same run; fusing planning and implementation overloads the context and stalls the
+model.
+
+## Round G - Implementation (Run 2: a SEPARATE, user-initiated run)
+
+Round G is **Run 2**, started only when the user explicitly asks to implement an approved plan. It is a
+FRESH invocation that loads `round-f-implementation-plan.yaml` as its input and executes its
+`ordered_steps`; it does not re-derive the plan. Implementation incorporates a **Migrate shape**:
+discover the edit or experiment sites, then transform each in an isolated worktree or disjoint workspace
+as a per-site pipeline (verify each as it lands). The Evidence-Tribunal rerun, ledger update, and final
+report stay GLOBAL Orchestrator barrier steps, not per-site. Use the worktree/disjoint-directory rule in
 `worktrees-and-artifacts.md`; a disjoint working directory is weaker isolation than a git worktree and
 must not be silently equated with one.
 
@@ -338,3 +427,23 @@ must not be silently equated with one.
 
 No worker may silently change hypotheses, metrics, thresholds, splits, denominators, or acceptance
 criteria. A material change creates a new Experiment Card version and returns to the proper gate.
+
+## Completion Gate (before any final answer)
+
+The run is not finished when the prose reads well — it is finished when the substrate validates. Before
+writing ANY final answer, run:
+
+```
+python3 scripts/validate_artifacts.py --audit-run .research-workflow/runs/<run_id>/
+```
+
+A non-zero exit means the run is incomplete: fix or redispatch, do not narrate a result. The gate is
+fixture-agnostic and fails on missing/too-few `agents/<id>.json` spawn records, an artifact whose
+`agent_id` traces to no spawn record, zero `depth: deep` findings, a generate round with no verify
+round (or vice-versa), a single-judge (non-panel) Round D, dangling cross-references, an anonymization
+leak, an unjudged evidence packet, `edit_permission_before_approval: true`, a plan run missing its
+`round-f-implementation-plan.yaml`, or a plan run that contains a `round-g-final-report.yaml` (a fused
+run). This is what makes a single-context synthesis that *claims* to have run the team impossible to
+pass off as a real run. Record the result where the run ends: **Run 1** puts the `OK:` line +
+`audit_run_ok: true` + `audit_run_command` in `round-f-implementation-plan.{yaml,md}`; **Run 2** puts
+them in `round-g-final-report.{yaml,md}`.

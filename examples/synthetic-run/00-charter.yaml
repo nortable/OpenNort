@@ -1,5 +1,5 @@
 {
-  "run_id": "synthetic-v2-complete-team",
+  "run_id": "synthetic-run",
   "objective": "Validate the full adversarial workflow on a deterministic synthetic case.",
   "decision_to_support": "Can the Codex skill separate evidence-backed blockers from unsupported claims and user-owned choices?",
   "decision_owner": "user",
@@ -32,5 +32,7 @@
   ],
   "budget_or_cost_constraints": "offline only",
   "user_checkpoint_required": "yes",
-  "edit_permission_before_checkpoint": "no"
+  "edit_permission_before_checkpoint": "no",
+  "external_evidence_needed": "no",
+  "run_mode": "plan"
 }

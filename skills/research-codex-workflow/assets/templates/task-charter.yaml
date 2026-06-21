@@ -11,5 +11,7 @@
   "required_evidence": [],
   "budget_or_cost_constraints": "",
   "user_checkpoint_required": "unknown",
-  "edit_permission_before_checkpoint": "no"
+  "edit_permission_before_checkpoint": "no",
+  "external_evidence_needed": "unknown",
+  "run_mode": "plan"
 }

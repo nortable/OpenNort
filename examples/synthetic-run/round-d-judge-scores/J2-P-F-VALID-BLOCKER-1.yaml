@@ -1,8 +1,8 @@
 {
   "packet_id": "P-F-VALID-BLOCKER-1",
-  "judge_id": "J1",
-  "agent_id": "D-JUDGE-1",
-  "lens": "decision-impact",
+  "judge_id": "J2",
+  "agent_id": "D-JUDGE-2",
+  "lens": "methodology",
   "blocker_score": 5,
   "warning_score": 1,
   "false_positive_risk": 1,
@@ -13,5 +13,5 @@
   "reproducibility": 4,
   "final_class": "accepted_blocker",
   "hard_gate_failures": [],
-  "rationale": "(decision-impact lens) accepted evidence supports a blocker; unsupported critique excluded."
+  "rationale": "(methodology lens) accepted evidence supports a blocker; unsupported critique excluded."
 }

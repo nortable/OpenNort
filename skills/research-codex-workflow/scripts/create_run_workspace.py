@@ -7,7 +7,7 @@ with `run_synthetic_fixture.py` and `validate_artifacts.py` so the three never d
 Writer isolation (R20): a parallel write worker gets either a git worktree (when the run targets a real
 repo) or, at a non-git location like `$HOME`, a disjoint per-writer directory under
 `runs/<run_id>/writers/<worker_id>/` with an atomic plain-text `.lock` claim file. Read-only roles get
-no writer directory. No SQLite/heartbeat lock machinery (that is product-build-gated).
+no writer directory. The lock is deliberately a plain-text claim file — no SQLite/heartbeat machinery.
 """
 
 from __future__ import annotations

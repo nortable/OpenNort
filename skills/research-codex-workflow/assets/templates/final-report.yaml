@@ -1,6 +1,6 @@
 {
   "run_id": "",
-  "mode": "full_adversarial",
+  "mode": "adversarial",
   "summary_zh": "",
   "task_charter": {},
   "decision_ledger": [],
@@ -10,5 +10,8 @@
   "validation": [],
   "protected_files_not_edited": true,
   "residual_risks": [],
-  "next_highest_value_action": ""
+  "next_highest_value_action": "",
+  "audit_run_ok": true,
+  "audit_run_command": "",
+  "judge_synthesis": {}
 }

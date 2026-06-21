@@ -40,6 +40,7 @@ ARTIFACT_ROUTING: dict[str, str] = {
     "round-d-judge-scores/*.yaml": "judge-score",
     "round-e-decision-ledger.yaml": "decision-ledger",
     "round-f-user-checkpoint.yaml": "user-checkpoint",
+    "round-f-implementation-plan.yaml": "implementation-plan",
     "progress-snapshots/*.yaml": "progress-snapshot",
     "round-g-final-report.yaml": "final-report",
     "experiment-cards/*.yaml": "experiment-card",
@@ -148,13 +149,33 @@ def validate_fixture(path: Path) -> list[str]:
     return failures
 
 
-# Roles that must stay strictly read-only (R20). Matched EXACTLY against a dispatch role, never by
-# substring (substring would wrongly gate legitimately-combined writer roles in lightweight/standard mode).
+# Roles that must stay strictly read-only. Matched EXACTLY against a dispatch role, never by substring.
+# The lean roster's read-only spine is Finder / Falsifier / Evidence Auditor / Judge / Completeness
+# Critic; the legacy specialist names are kept so a plan that still uses them stays enforced.
 READ_ONLY_ROLES = frozenset({
+    "Finder", "Falsifier", "Evidence Auditor", "Judge", "Completeness Critic",
     "Research Director", "Relevance Arbiter", "Literature Scout", "Data Auditor", "Baseline Auditor",
-    "Claim Auditor", "Hypothesis Generator", "Falsifier", "Methodologist", "Code Red-Team",
-    "Test Reviewer", "Evidence Auditor", "Judge", "Loop Guard", "Completeness Critic",
+    "Claim Auditor", "Hypothesis Generator", "Methodologist", "Code Red-Team",
+    "Test Reviewer", "Loop Guard",
 })
+
+# Completion-gate thresholds: a real adversarial run must show that independent subagents actually ran
+# (generate + verify), not that one context narrated every role. These are checked by
+# validate_spawn_evidence() at the top of validate_real_run() so `--audit-run` cannot pass on a faked
+# or empty run. The sequential-fallback path STILL writes agents/*.json records, so the gate binds
+# there too — fallback is not an escape hatch.
+MIN_SPAWN_RECORDS = 3            # at least one Finder, one Falsifier, one Judge (distinct agent_ids)
+GENERATE_ROUNDS = frozenset({"A"})
+VERIFY_ROUNDS = frozenset({"B", "C", "D"})
+
+# Curated external-fact signals: a claim using one of these usually depends on facts OUTSIDE the repo
+# (a public dataset's labels, a SOTA/prior-art number, a pretraining corpus) that local inspection
+# cannot settle, so it warrants a Literature Scout. Curated to limit false positives (e.g. " leakage"
+# with a leading space, "novelty" not "novel").
+EXTERNAL_FACT_SIGNALS = (
+    "state-of-the-art", "state of the art", " sota", "outperform", "prior art", "prior-art",
+    "first to ", "novelty", " leakage", "contaminat", "pretraining corpus", "pretrain",
+)
 
 # Mandatory non-empty run directories (R22 per-round completeness). experiment-cards/ and writers/ may
 # legitimately be empty, so they are not required here.
@@ -312,13 +333,15 @@ def validate_packet_provenance(run_root: Path, failures: list[str]) -> None:
 
 
 def validate_judge_coverage(run_root: Path, failures: list[str]) -> None:
-    """R27 enforcement: every assembled evidence packet must receive at least one Round D judge score.
+    """R27 enforcement + judge-panel fidelity: every assembled evidence packet must receive at least one
+    Round D judge score; whenever any packet exists Round D must be a real PANEL (>=2 distinct judge
+    agent_ids), so synthesize-from-winner is not vacuous; and co-judges scoring the SAME packet must
+    carry DISTINCT emphasis lenses (perspective-diverse, not duplicate passes).
 
-    Closes the 'assembled N packets, judged 1, promoted N' coverage hole: a judge that picks only the
-    "most decision-critical" packet leaves the rest unscored, yet Round E still promotes them. A packet
-    that reaches the ledger as accepted must have been independently judged, never silently rubber-
-    stamped. (Round D may legitimately be empty when Round C accepted nothing — no packets, no
-    requirement.)"""
+    Without the panel floor a single judge passes the gate and "synthesize from the winning pass + graft
+    runner-up blockers" has no winner to choose — the master-template judge-panel pattern would be named
+    but never exercised. (Round D may legitimately be empty when Round C accepted nothing — no packets,
+    no requirement.)"""
     packet_ids = []
     for p in sorted(run_root.glob("evidence-packets/*.yaml")):
         data = load_json_yaml(p)
@@ -326,15 +349,34 @@ def validate_judge_coverage(run_root: Path, failures: list[str]) -> None:
     if not packet_ids:
         return
     judged: set[str] = set()
+    panel_agents: set[str] = set()
+    lenses_by_packet: dict[str, list[str]] = {}
     for path in sorted(run_root.glob("round-d-judge-scores/*.yaml")):
         score = load_json_yaml(path)
         if isinstance(score, dict) and score.get("packet_id"):
-            judged.add(score["packet_id"])
+            pid = score["packet_id"]
+            judged.add(pid)
+            aid = (score.get("agent_id") or "").strip()
+            if aid:
+                panel_agents.add(aid)
+            lenses_by_packet.setdefault(pid, []).append((score.get("lens") or "").strip())
     for pid in packet_ids:
         if pid not in judged:
             failures.append(
                 f"evidence-packets: packet {pid!r} has no Round D judge score — every assembled "
                 f"packet must be independently judged (no silent promotion of unjudged evidence)"
+            )
+    if len(panel_agents) < 2:
+        failures.append(
+            f"Round D is not a panel: only {len(panel_agents)} distinct judge agent_id(s) scored "
+            f"{len(packet_ids)} assembled packet(s); the judge-panel pattern needs >=2 independent "
+            f"judges so synthesize-from-winner has a winner to choose"
+        )
+    for pid, lenses in lenses_by_packet.items():
+        if len(lenses) >= 2 and len(set(lenses)) < len(lenses):
+            failures.append(
+                f"evidence-packets: packet {pid!r} has co-judges sharing (or missing) an emphasis "
+                f"lens; a perspective-diverse panel needs a DISTINCT lens per judge"
             )
 
 
@@ -603,6 +645,182 @@ def validate_dispatch_groups(run_root: Path, failures: list[str], warnings: list
             )
 
 
+def validate_spawn_evidence(run_root: Path, failures: list[str]) -> None:
+    """Completion gate: prove independent subagents actually ran, instead of one context narrating
+    every role and hand-writing the artifacts (the failure-audit root cause). This is the
+    machine-checkable half of the no-fake-runs rule. It requires:
+
+      1. agents/ holds >= MIN_SPAWN_RECORDS distinct completed subagent-record (*.json) files;
+      2. the records cover at least one generate round (A) AND one verify round (B/C/D) — a single
+         faked record, or finders-only, is rejected;
+      3. every Round A/B/D artifact's agent_id traces to one of those spawn records (an artifact
+         cannot be hand-authored without a corresponding spawn);
+      4. discovery went deep: at least one Round A finding is depth: deep (a zero-deep run is the
+         'shallow pass' shortcut, not a clean bill).
+
+    Forging a green gate therefore costs strictly more than running the real workflow.
+    """
+    records = [
+        d for d in (load_json_yaml(p) for p in sorted((run_root / "agents").glob("*.json")))
+        if isinstance(d, dict)
+    ]
+    if not records:
+        failures.append(
+            "completion gate: agents/ has no subagent-record (*.json) — no evidence any subagent ran; "
+            "a real adversarial run logs one record per dispatched agent (sequential fallback included)"
+        )
+        return
+
+    completed = [r for r in records if r.get("status") == "completed"]
+    agent_ids = {(r.get("agent_id") or "").strip() for r in completed if (r.get("agent_id") or "").strip()}
+    if len(agent_ids) < MIN_SPAWN_RECORDS:
+        failures.append(
+            f"completion gate: only {len(agent_ids)} distinct completed subagent(s) in agents/; a real "
+            f"adversarial run spawns at least {MIN_SPAWN_RECORDS} (Finder, Falsifier, Judge)"
+        )
+    rounds = {(r.get("round") or "").strip() for r in completed}
+    if not (rounds & GENERATE_ROUNDS):
+        failures.append("completion gate: no completed subagent in a generate round (A) — discovery never ran")
+    if not (rounds & VERIFY_ROUNDS):
+        failures.append(
+            "completion gate: no completed subagent in a verify round (B/C/D) — nothing was "
+            "adversarially checked"
+        )
+
+    for pattern in ("round-a-findings/*.yaml", "round-b-critiques/*.yaml", "round-d-judge-scores/*.yaml"):
+        for path in sorted(run_root.glob(pattern)):
+            data = load_json_yaml(path)
+            aid = (data.get("agent_id") or "").strip() if isinstance(data, dict) else ""
+            if aid and aid not in agent_ids:
+                failures.append(
+                    f"{path.relative_to(run_root)}: agent_id {aid!r} has no agents/<id>.json spawn "
+                    f"record — artifact not traceable to a real subagent"
+                )
+
+    findings = [
+        d for d in (load_json_yaml(p) for p in sorted(run_root.glob("round-a-findings/*.yaml")))
+        if isinstance(d, dict)
+    ]
+    if findings and not any(f.get("depth") == "deep" for f in findings):
+        failures.append(
+            "completion gate: zero depth: deep Round A findings — the deep-insight lens (power/MDE, "
+            "resampling unit, leakage, endpoint, confirmatory-vs-exploratory) did not run; a "
+            "surface-only pass is a coverage gap, not a clean bill"
+        )
+
+
+def validate_external_evidence(run_root: Path, failures: list[str], warnings: list[str]) -> None:
+    """Proactive literature-review check — stop the Literature Scout from being a passive afterthought.
+    A run whose claims depend on EXTERNAL facts (novelty, SOTA, prior-art, leakage/contamination,
+    pretraining provenance) must EITHER carry literature/web evidence (a `source-record`, e.g. from
+    `scripts/fetch.py`) OR honestly log each such claim as unverified
+    (`coverage_log.external_verification_unavailable`).
+
+    - charter `external_evidence_needed == 'yes'` and the run has NEITHER  -> FAIL (declared, not done);
+    - else an external-fact keyword appears in the charter/findings and the run has NEITHER -> WARN
+      (run a Literature Scout, log it unavailable, or set `external_evidence_needed`).
+    """
+    texts: list[str] = []
+    declared = None
+    charter_path = run_root / "00-charter.yaml"
+    if charter_path.exists():
+        charter = load_json_yaml(charter_path)
+        if isinstance(charter, dict):
+            declared = charter.get("external_evidence_needed")
+            for key in ("objective", "decision_to_support"):
+                if isinstance(charter.get(key), str):
+                    texts.append(charter[key])
+            for item in charter.get("success_criteria", []) or []:
+                if isinstance(item, str):
+                    texts.append(item)
+    for path in sorted(run_root.glob("round-a-findings/*.yaml")):
+        finding = load_json_yaml(path)
+        if isinstance(finding, dict) and isinstance(finding.get("claim"), str):
+            texts.append(finding["claim"])
+    blob = " ".join(texts).lower()
+    hits = sorted({kw.strip() for kw in EXTERNAL_FACT_SIGNALS if kw in blob})
+
+    run_text = []
+    for path in list(run_root.rglob("*.yaml")) + list(run_root.rglob("*.json")):
+        run_text.append(path.read_text(encoding="utf-8", errors="ignore"))
+    rt = " ".join(run_text)
+    has_evidence = (
+        "content_sha256" in rt or '"source_id"' in rt
+        or "external_verification_unavailable" in rt
+    )
+    if has_evidence:
+        return
+    if declared == "yes":
+        failures.append(
+            "completion gate: charter external_evidence_needed=='yes' but the run has no source-record "
+            "(literature/web evidence) and no coverage_log.external_verification_unavailable entry — run "
+            "a Literature Scout (scripts/fetch.py) or log each external claim as unavailable"
+        )
+    elif hits:
+        warnings.append(
+            f"claims mention external facts {hits} but the run has no source-record and no "
+            f"external_verification_unavailable log — dispatch a Literature Scout (scripts/fetch.py) for "
+            f"prior-art/SOTA/leakage, log it unavailable, or set charter external_evidence_needed"
+        )
+
+
+def validate_run_mode_gate(run_root: Path, failures: list[str]) -> None:
+    """Enforce the Run-1 (plan) / Run-2 (implement) split mechanically, not by prose alone — this is
+    what closes the 'a fused run passes the same gate' loophole.
+
+    - read-only-before-approval: `round-f-user-checkpoint.edit_permission_before_approval` must be False
+      (both modes — nothing edits before the Round F checkpoint);
+    - plan mode (Round 0→F, the default): MUST deliver `round-f-implementation-plan.yaml` with non-empty
+      `ordered_steps`, and MUST NOT contain `round-g-final-report.yaml` (a Round-G report means planning
+      and implementation were fused into one run — the exact stall the split prevents);
+    - implement mode (Run 2): MUST contain `round-g-final-report.yaml`.
+
+    Mode is the charter's `run_mode`; absent, it is inferred (a round-g report → implement, else plan).
+    """
+    has_report = (run_root / "round-g-final-report.yaml").exists()
+    declared = None
+    charter_path = run_root / "00-charter.yaml"
+    if charter_path.exists():
+        charter = load_json_yaml(charter_path)
+        if isinstance(charter, dict):
+            declared = charter.get("run_mode")
+    mode = declared or ("implement" if has_report else "plan")
+
+    checkpoint_path = run_root / "round-f-user-checkpoint.yaml"
+    if checkpoint_path.exists():
+        cp = load_json_yaml(checkpoint_path)
+        if isinstance(cp, dict) and cp.get("edit_permission_before_approval") is not False:
+            failures.append(
+                "completion gate: round-f-user-checkpoint.edit_permission_before_approval must be False "
+                "— nothing may edit project files before the Round F checkpoint"
+            )
+
+    if mode == "plan":
+        plan_path = run_root / "round-f-implementation-plan.yaml"
+        if not plan_path.exists():
+            failures.append(
+                "completion gate: plan run (run_mode=plan) produced no round-f-implementation-plan.yaml "
+                "— the Run-1 deliverable is missing"
+            )
+        else:
+            plan = load_json_yaml(plan_path)
+            if not (isinstance(plan, dict) and plan.get("ordered_steps")):
+                failures.append(
+                    "completion gate: round-f-implementation-plan.yaml has empty ordered_steps — the "
+                    "plan has no executable steps for Run 2"
+                )
+        if has_report:
+            failures.append(
+                "completion gate: a plan run must STOP at Round F, but it contains "
+                "round-g-final-report.yaml — planning and implementation were fused into one run; run "
+                "them as two separate invocations (Run 1 plans, Run 2 implements)"
+            )
+    elif mode == "implement" and not has_report:
+        failures.append(
+            "completion gate: implement run (run_mode=implement) produced no round-g-final-report.yaml"
+        )
+
+
 def validate_run_output(run_root: Path, warnings: list[str] | None = None) -> list[str]:
     failures: list[str] = []
     if warnings is None:
@@ -620,9 +838,9 @@ def validate_run_output(run_root: Path, warnings: list[str] | None = None) -> li
         "round-e-decision-ledger.yaml",
         "round-f-user-checkpoint.yaml",
         "round-f-user-checkpoint.md",
+        "round-f-implementation-plan.yaml",
+        "round-f-implementation-plan.md",
         "progress-snapshots/round-e.yaml",
-        "round-g-final-report.yaml",
-        "round-g-final-report.md",
         "run-summary.yaml",
     ]
     for rel in required_paths:
@@ -662,6 +880,8 @@ def validate_real_run(run_root: Path, warnings: list[str]) -> list[str]:
     Unlike validate_run_output (which also asserts the fixture's exact filenames and seeded decision
     classes), this is fixture-agnostic, so `--audit-run <path>` can gate a real Codex/agent run."""
     failures: list[str] = []
+    validate_spawn_evidence(run_root, failures)   # completion gate FIRST: no real subagents -> fail fast
+    validate_run_mode_gate(run_root, failures)    # Run-1 plan vs Run-2 implement split (no fused run)
     validate_instances(run_root, failures)
     validate_references(run_root, failures)
     validate_provenance(run_root, failures)
@@ -675,6 +895,7 @@ def validate_real_run(run_root: Path, warnings: list[str]) -> list[str]:
     validate_round_completeness(run_root, failures)
     validate_proportionate_verification(run_root, warnings)
     validate_discovery_depth(run_root, warnings)
+    validate_external_evidence(run_root, failures, warnings)
     return failures
 
 

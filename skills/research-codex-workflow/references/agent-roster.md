@@ -1,7 +1,6 @@
 # Agent Roster Reference
 
-Load this file when using full adversarial, full-agent, red-team, multi-agent, or research-team
-mode. The roster is not a concurrency target. Instantiate only roles needed for the current round.
+The roster is not a concurrency target. Instantiate only roles needed for the current round.
 Use `role-dispatch-templates.md` for concrete subagent prompts.
 
 The Orchestrator is always the main Codex agent. Subagents are bounded workers that return artifacts;
@@ -22,26 +21,47 @@ ALL deterministic control flow and makes no domain finding of its own:
 Symmetric worker ban: no worker emits an action verb, assembles packets, or owns a final decision; the
 Orchestrator emits no first-pass finding, critique, or score.
 
-## Worker Roles (18)
+## Worker Roles (lean roster)
 
-1. **Research Director** - Maintains charter, decision objective, non-goals, success criteria.
-2. **Relevance Arbiter** - Scores decision consequence, information value, redundancy, cost; returns a scored signal (RelevanceScore), never an action.
-3. **Literature Scout** - Retrieves primary sources, contradictory evidence, source metadata via `scripts/fetch.py <url>` (deterministic fetch + cache + content_sha256 → a `source-record`) or a verified native web tool; see `references/web-research.md`. If neither can reach the network the role is a no-op and every external-dependent claim is logged as a `claim_unverified` Completeness gap and in `coverage_log.external_verification_unavailable[]` (see `full-adversarial-workflow.md` "External-evidence honesty") — a local-only run never silently claims an external fact was verified.
-4. **Data Auditor** - Checks datasets, splits, denominators, labels, leakage, sample definitions.
-5. **Baseline Auditor** - Checks baseline fairness, feasibility, protocol alignment, missing controls.
-6. **Claim Auditor** - Compares report or paper claims to inspectable evidence.
-7. **Hypothesis Generator** - Produces null and materially different alternatives with falsifiers.
-8. **Falsifier / Red Team** - Attacks strongest-case assumptions, confounders, circularity, leakage.
-9. **Methodologist** - Reviews validity, controls, metrics, sample logic, stopping rules; returns validity_verdict data, never an action. Owns the **deep-insight lens** (below): every full audit assigns at least one Methodologist (or Methodologist-tasked finder) so the run produces `depth: deep` findings, not only surface drift.
-10. **Code Red-Team** - Checks implementation drift, schemas, scripts, smoke tests, hidden assumptions.
-11. **Experiment Engineer** - Implements approved experiments in isolated write scope.
-12. **Test Reviewer** - Performs read-only fidelity and correctness verification.
-13. **Replicator** - Independently reproduces important results in clean scope.
-14. **Evidence Auditor** - Returns EvidenceDecision data (claim-to-evidence links, downgrades); does not assemble packets or decide.
-15. **Judge** - Scores anonymized accepted evidence packets independently under a distinct emphasis lens; the Orchestrator synthesizes from the winning pass and grafts runner-up dissents.
-16. **Integrator / Synthesizer** - Writes final docs or reports using accepted evidence only.
-17. **Loop Guard** - Detects stagnation, repetition, low-value work, and scope drift; returns a StagnationSignal, never an action (the Orchestrator owns loop_guard_action).
-18. **Completeness Critic** - Read-only; before the Round F checkpoint, returns a CompletenessCritique listing coverage gaps (a lens not run, a claim unverified, a source unread, a hypothesis untested). Must have produced none of the reviewed findings.
+The standing roster is small on purpose: a long role menu is what made earlier runs heavy enough to
+shortcut. Five read-only roles carry the adversarial spine, and the **Finder** absorbs the old
+specialist auditors as *lenses* rather than separate standing roles. Round G adds on-demand write roles
+only after user approval.
+
+1. **Finder** (read-only) — the Round A discovery role; dispatch several with DISTINCT lenses, at least
+   one running the deep-insight lens. Declare the lens in the dispatch: *data* (splits, denominators,
+   labels, leakage, sample definitions), *baseline* (fairness, feasibility, missing controls), *claim*
+   (report/paper claims vs inspectable evidence), *code red-team* (implementation drift, schemas, smoke
+   tests, hidden assumptions), *hypothesis* (null + materially different alternatives with falsifiers),
+   and the mandatory **deep-insight / methodology lens** (validity, controls, metrics, stopping rules —
+   produces `depth: deep` findings). Each Finder returns MULTIPLE findings labeled `depth` and
+   `contestability`, and scored signals, never an action verb. External evidence (REQUIRED, not
+   optional, when the charter set `external_evidence_needed: yes` or a claim turns on novelty / prior-art
+   / SOTA / leakage / provenance): a Finder uses **Codex's NATIVE search + fetch/PDF tools** to find and
+   READ the papers — extracting the exact equation, the baseline method + dataset + split + metric +
+   reported number, and the implementation detail (not a generic summary) — and OPTIONALLY pins a
+   tamper-evident `content_sha256` via `scripts/fetch.py <url>` → a `source-record`. Do not reinvent a
+   fetcher/parser. If no native tool and fetch.py can both reach the network, every external-dependent
+   claim is logged as a `claim_unverified` Completeness gap and in
+   `coverage_log.external_verification_unavailable[]` (see `full-adversarial-workflow.md`
+   "External-evidence honesty") — a local-only run never silently claims an external fact was verified.
+2. **Falsifier / Red Team** (read-only) — attacks an anonymized finding it did NOT produce: strongest-
+   case assumptions, confounders, circularity, leakage. Defaults `refute_disposition` to `refuted` when
+   uncertain; records its `lens`.
+3. **Evidence Auditor** (read-only) — returns `EvidenceDecision` data (claim-to-evidence links,
+   downgrades); does NOT assemble packets or decide. The Orchestrator assembles packets.
+4. **Judge** (read-only) — scores anonymized accepted evidence packets independently under a distinct
+   emphasis lens; the Orchestrator synthesizes from the winning pass and grafts runner-up dissents.
+5. **Completeness Critic** (read-only) — before the Round F checkpoint, returns a `CompletenessCritique`
+   of coverage gaps (a lens not run, a claim unverified, a source unread, a hypothesis untested). Must
+   have produced none of the reviewed findings, so it cannot self-certify.
+
+Round 0 charter, relevance gating, dedup, anonymization, packet assembly, loop-guard / stop-rule
+evaluation, the decision ledger, and final synthesis are all **Orchestrator-owned** (the main Codex
+agent), not dispatched roles. Round G implementation, test-review, and replication are on-demand
+roles run in a SEPARATE user-initiated Run 2 (a fresh invocation that loads
+`round-f-implementation-plan.yaml`), never auto-continued from the Run-1 plan and never part of the
+standing read-only roster.
 
 ## Role Separation
 
@@ -59,18 +79,18 @@ check): an artifact's author can never be its own skeptic, auditor, or judge.
 - Only **non-adversarial reader** roles may be merged (e.g. one agent reading several documents); no
   merge may place generation and verification of the same artifact in one `agent_id`.
 - The Completeness Critic may not self-certify coverage: it must have produced none of the findings it
-  reviews, so it cannot be folded into the Relevance Arbiter or Loop Guard.
+  reviews, so it cannot be a Finder from this run or the Orchestrator's own coverage scan.
 
 ## Dispatch Policy
 
-For full adversarial mode when subagents are available:
+When subagents are available:
 
 - Round A: three to six agents; each returns MULTIPLE findings labeled `depth`/`contestability`, and at least one runs the deep-insight lens.
 - Round B: two to four agents — but routed by contestability, not flat. Low-contestability binary facts get ONE light confirmation pass; the multi-lens Falsifier panel is reserved for `medium|high`-contestability or high-stakes findings (see `full-adversarial-workflow.md` "Proportionate verification").
 - Round C: one Evidence Auditor, with a second pass for high-impact disputes.
 - Round D: two or three independent judge passes; the panel must cover EVERY assembled packet (split packets across judges — no scoring only the most critical one).
-- Round E and F: local Orchestrator.
-- Round G: only approved implementation and review agents.
+- Round E and F: local Orchestrator; Run 1 ends at the plan.
+- Round G: Run 2 only (separate, user-initiated) — approved implementation and review agents.
 
 Every dispatch must specify:
 
@@ -104,9 +124,9 @@ the references cite it instead of restating numbers; the machine-enforced mirror
 3. This cap is intentionally below Claude Code's `min(16, cores-2)` (~30 here) because the Codex
    substrate is Orchestrator-mediated and depth is 1; do not raise it to the core count. Raising the
    cap is a one-line change to this block plus `config.toml [agents].max_threads`.
-4. Roster cardinality: exactly **18 worker roles plus the Orchestrator** (see the numbered list
-   above). Instantiating the full roster simultaneously is forbidden; the 12-open cap binds regardless
-   of roster size. The roster is a menu, not a swarm target.
+4. Roster cardinality: **5 standing read-only worker roles** (Finder, Falsifier, Evidence Auditor,
+   Judge, Completeness Critic) plus on-demand Round G write roles, plus the Orchestrator. Finder lenses
+   are a menu, not a swarm target; the 12-open cap binds regardless of how many lenses are queued.
 5. Hygiene: do not duplicate assignments; prefer narrow prompts; close completed agents after
    integration; do not wait idly when non-overlapping local Orchestrator work exists; maintain
    first-pass isolation; route all cross-agent communication through artifacts or explicit
