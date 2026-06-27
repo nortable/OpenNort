@@ -1,0 +1,7 @@
+interface:
+  display_name: "OpenNort Research Workflow"
+  short_description: "Evidence-gated adversarial research workflow for Codex."
+  brand_color: "#2F6F4E"
+  default_prompt: "Use $research-codex-workflow to run an evidence-gated OpenNort workflow on this repository."
+policy:
+  allow_implicit_invocation: true

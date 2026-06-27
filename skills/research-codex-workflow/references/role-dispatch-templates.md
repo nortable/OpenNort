@@ -170,6 +170,98 @@ Do not edit the author's code; the Orchestrator stops at Round F before fixes.
 Output: Finding artifacts (severity = merge gate: blocker=must-fix, warning=nit).
 ```
 
+## Finder lens - Codex Extension Compatibility
+
+```text
+Objective: audit whether [plugin_or_skill_package] is compatible with Codex extension packaging and
+skill discovery.
+
+Check:
+- `.codex-plugin/plugin.json` exists for reusable extension distribution and points to `./skills/`;
+- every packaged skill has `SKILL.md` frontmatter with `name` and a concise, trigger-friendly
+  `description`;
+- long instructions live in `references/`, deterministic helpers in `scripts/`, and templates/assets
+  in `assets/` or `examples/`;
+- optional Codex metadata in `agents/openai.yaml` does not claim missing assets or unavailable tools;
+- package validation commands are documented and runnable.
+
+Required evidence: manifest path, skill path, frontmatter fields, validation command and output.
+Output: Finding artifacts. Do not convert packaging observations into install instructions; the
+Orchestrator decides the release route.
+```
+
+## Finder lens - Spec Kit Mapping
+
+```text
+Objective: test whether a Spec Kit feature/spec/plan/tasks input can map into existing OpenNort
+artifacts without adding a new standing role or bypassing Round F.
+
+Map:
+- constitution/principles -> Task Charter known_high_risk_choices or success_criteria;
+- feature/spec -> Round A Finding or Hypothesis artifacts;
+- plan/tasks -> Round F ImplementationPlan ordered_steps;
+- unresolved ambiguity -> Round F UserCheckpoint.
+
+Required evidence: source/version identifier, fixture path, expected OpenNort artifact fields, and
+fail criteria. Mark the mapping insufficient if it needs hidden state, non-artifact instructions, or
+Run-1 implementation.
+Output: Finding artifacts and candidate schema-fit gaps.
+```
+
+## Finder lens - GitHub PR Bridge Intake
+
+```text
+Objective: turn a GitHub PR or local diff into OpenNort's existing code-review workflow inputs.
+
+Capture:
+- base and head SHA or explicit diff range;
+- changed files and hunk summaries;
+- reviewer lens (correctness, security, performance, tests, compatibility);
+- required evidence for each finding: file path, changed hunk, surrounding context, and reproducer or
+  reasoning for non-obvious issues.
+
+Reject or downgrade if base/head identity is missing, a finding relies only on model prose, or the
+reviewer tries to edit code during Run 1.
+Output: Finding artifacts suitable for the normal Falsifier -> Evidence Auditor -> Judge route.
+```
+
+## Finder lens - Skill Marketplace Audit
+
+```text
+Objective: audit a third-party skill, agent, command, or marketplace listing before any content is
+imported or wrapped by OpenNort.
+
+Check:
+- license and attribution;
+- target harness and claimed Codex compatibility;
+- dependency footprint and install behavior;
+- shell, network, filesystem, and write permissions;
+- prompt-injection or instruction-shadowing risk;
+- schema-fit cost: mine, wrap, defer, or reject.
+
+Required evidence: source URL, retrieval date, license observation, dependency summary, permission
+summary, and concrete reason for the recommended outcome. README claims are not runtime proof.
+Output: Finding artifacts. Do not recommend wholesale import without per-skill review.
+```
+
+## Finder lens - Runtime Adapter Boundary
+
+```text
+Objective: evaluate whether a runtime framework such as LangGraph, OpenAI Agents SDK, Microsoft Agent
+Framework, OpenHands, SWE-agent, or Plandex can remain an optional backend instead of becoming an
+OpenNort core dependency.
+
+Pass only if:
+- OpenNort can run without the adapter installed;
+- the adapter consumes an approved `round-f-implementation-plan.yaml`;
+- the adapter returns command, file, output, hash, failure, retry, and cost/latency evidence;
+- OpenNort reruns the Evidence Tribunal and final report on adapter results.
+
+Reject or defer if the adapter changes hypotheses, metrics, thresholds, splits, or final truth
+ownership.
+Output: Finding artifacts and explicit adapter-boundary risks.
+```
+
 The Round G roles below run only in **Run 2 — a SEPARATE, user-initiated invocation** that loads the
 approved `round-f-implementation-plan.yaml`; they are never auto-continued from the Run-1 plan.
 

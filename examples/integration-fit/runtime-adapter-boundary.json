@@ -1,0 +1,51 @@
+{
+  "fixture_id": "runtime-adapter-boundary-minimal",
+  "external_system": "optional-runtime-adapter",
+  "input_kind": "adapter-boundary",
+  "source_version": "mock-v1",
+  "validation_command": "python skills/research-codex-workflow/scripts/validate_extension_package.py",
+  "candidate_adapters": [
+    "LangGraph",
+    "OpenAI Agents SDK",
+    "Microsoft Agent Framework",
+    "OpenHands",
+    "SWE-agent",
+    "Plandex"
+  ],
+  "expected_open_nort_mapping": {
+    "input_artifact": "round-f-implementation-plan.yaml",
+    "output_artifacts": [
+      "command manifest",
+      "changed file manifest",
+      "stdout or stderr summary",
+      "artifact hashes",
+      "failure and retry records"
+    ],
+    "postprocessing": [
+      "Evidence Tribunal rerun",
+      "decision ledger update",
+      "round-g-final-report.yaml"
+    ]
+  },
+  "expected_artifacts": [
+    "round-f-implementation-plan.yaml",
+    "adapter-command-manifest.json",
+    "adapter-file-manifest.json",
+    "round-g-final-report.yaml"
+  ],
+  "pass_criteria": [
+    "OpenNort works without the adapter installed.",
+    "The adapter returns evidence; it does not own final truth.",
+    "The adapter cannot change hypotheses, metrics, thresholds, or split definitions."
+  ],
+  "fail_criteria": [
+    "Adapter installation becomes required for basic skill use.",
+    "Adapter output bypasses Evidence Tribunal review.",
+    "Adapter changes the approved plan without a new checkpoint."
+  ],
+  "negative_controls": [
+    "Adapter required for normal skill use.",
+    "Adapter output that changes approved hypotheses, metrics, thresholds, or split definitions.",
+    "Adapter output accepted as final truth without Evidence Tribunal review."
+  ]
+}

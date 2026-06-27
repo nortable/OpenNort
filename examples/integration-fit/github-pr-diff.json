@@ -1,0 +1,56 @@
+{
+  "fixture_id": "github-pr-diff-minimal",
+  "external_system": "github",
+  "input_kind": "pull-request-diff",
+  "source_version": "mock-v1",
+  "validation_command": "python skills/research-codex-workflow/scripts/validate_extension_package.py",
+  "input_summary": {
+    "base_sha": "1111111111111111111111111111111111111111",
+    "head_sha": "2222222222222222222222222222222222222222",
+    "files_changed": [
+      {
+        "path": "skills/research-codex-workflow/scripts/validate_artifacts.py",
+        "hunk_summary": "Changes judge coverage behavior."
+      }
+    ]
+  },
+  "expected_open_nort_mapping": {
+    "charter_fields": [
+      "scope",
+      "required_evidence"
+    ],
+    "finder_lens": "Code Reviewer",
+    "finding_evidence": [
+      "file path",
+      "changed hunk",
+      "reproducer or reasoning for non-obvious issues"
+    ],
+    "ledger_classes": [
+      "accepted_blocker",
+      "accepted_non_blocking",
+      "rejected_or_unsupported",
+      "needs_user_decision"
+    ]
+  },
+  "expected_artifacts": [
+    "00-charter.yaml",
+    "round-a-findings/*.yaml",
+    "evidence-packets/*.yaml",
+    "round-e-decision-ledger.yaml"
+  ],
+  "pass_criteria": [
+    "Every accepted finding names base/head SHA and file context.",
+    "Accepted blockers trace to judged evidence packets.",
+    "No review worker edits files during Run 1."
+  ],
+  "fail_criteria": [
+    "The PR bridge omits base or head SHA.",
+    "A finding is based only on model prose.",
+    "The bridge directly applies fixes before Round F approval."
+  ],
+  "negative_controls": [
+    "Diff fixture without base_sha or head_sha.",
+    "Finding with no file path, hunk, line, or surrounding code context.",
+    "PR bridge that applies a fix during Run 1."
+  ]
+}

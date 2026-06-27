@@ -1,0 +1,41 @@
+{
+  "name": "opennort",
+  "version": "0.1.0",
+  "description": "Schema-gated adversarial research workflow for Codex.",
+  "author": {
+    "name": "nortable",
+    "url": "https://github.com/nortable"
+  },
+  "homepage": "https://github.com/nortable/OpenNort",
+  "repository": "https://github.com/nortable/OpenNort.git",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "skills",
+    "research-workflow",
+    "multi-agent",
+    "evaluation",
+    "evidence"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "OpenNort",
+    "shortDescription": "Adversarial research workflow for Codex.",
+    "longDescription": "OpenNort packages a deterministic, evidence-gated, multi-agent research workflow as a Codex extension. It provides a schema-validated skill, retained subagent records, source hashing, and a completion gate for research, review, and experiment-planning work.",
+    "developerName": "nortable",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills",
+      "Research",
+      "Review",
+      "Workflow"
+    ],
+    "websiteURL": "https://github.com/nortable/OpenNort",
+    "defaultPrompt": [
+      "Use OpenNort Run 1 to produce an evidence-backed plan.",
+      "Use OpenNort Run 2 to execute the approved plan.",
+      "Audit this repo with OpenNort's adversarial workflow."
+    ],
+    "brandColor": "#2F6F4E"
+  }
+}

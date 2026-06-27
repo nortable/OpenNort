@@ -1,0 +1,58 @@
+{
+  "fixture_id": "marketplace-skill-listing-minimal",
+  "external_system": "community-skill-marketplace",
+  "input_kind": "skill-listing",
+  "source_version": "mock-v1",
+  "validation_command": "python skills/research-codex-workflow/scripts/validate_extension_package.py",
+  "input_summary": {
+    "name": "example-review-swarm",
+    "claimed_harnesses": [
+      "Codex",
+      "Claude Code"
+    ],
+    "license": "MIT",
+    "contains_scripts": true,
+    "script_permissions": [
+      "shell",
+      "network"
+    ],
+    "prompt_risk": "May override local review policy if imported wholesale."
+  },
+  "expected_open_nort_mapping": {
+    "finder_lens": "Skill Marketplace Audit",
+    "required_observations": [
+      "license",
+      "attribution",
+      "dependency footprint",
+      "permission profile",
+      "prompt-safety risk",
+      "schema-fit cost"
+    ],
+    "recommended_outcomes": [
+      "mine",
+      "wrap",
+      "defer",
+      "reject"
+    ]
+  },
+  "expected_artifacts": [
+    "round-a-findings/*.yaml",
+    "evidence-packets/*.yaml",
+    "round-e-decision-ledger.yaml"
+  ],
+  "pass_criteria": [
+    "No wholesale import is recommended.",
+    "Scripts are treated as untrusted until reviewed.",
+    "Runtime claims are downgraded unless validated locally."
+  ],
+  "fail_criteria": [
+    "README claims are treated as proof of Codex compatibility.",
+    "Network or shell scripts are imported without review.",
+    "License or attribution is missing."
+  ],
+  "negative_controls": [
+    "Listing with no source URL, license, or attribution trail.",
+    "Executable script imported without permission and dependency review.",
+    "Prompt text that shadows or overrides OpenNort workflow rules."
+  ]
+}

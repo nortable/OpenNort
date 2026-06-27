@@ -1,0 +1,57 @@
+{
+  "fixture_id": "spec-kit-feature-minimal",
+  "external_system": "github/spec-kit",
+  "input_kind": "spec-driven-feature",
+  "source_version": "documentation-snapshot-2026-06-21",
+  "validation_command": "python skills/research-codex-workflow/scripts/validate_extension_package.py",
+  "input_summary": {
+    "constitution": "The feature must preserve auditability and user approval before implementation.",
+    "spec": "Add an export command for validated run artifacts.",
+    "plan": "Define artifact manifest, then implement export, then validate with fixture replay.",
+    "tasks": [
+      "Map artifact manifest fields",
+      "Add export command",
+      "Run validator on exported run"
+    ]
+  },
+  "expected_open_nort_mapping": {
+    "charter_fields": [
+      "objective",
+      "known_high_risk_choices",
+      "success_criteria"
+    ],
+    "round_a_findings": [
+      "scope and acceptance criteria finding",
+      "risk finding for export completeness"
+    ],
+    "round_f_plan": [
+      "ordered_steps",
+      "validation_strategy",
+      "open_decisions"
+    ],
+    "checkpoint": [
+      "approval before implementation"
+    ]
+  },
+  "expected_artifacts": [
+    "00-charter.yaml",
+    "round-a-findings/*.yaml",
+    "round-f-implementation-plan.yaml",
+    "round-f-user-checkpoint.yaml"
+  ],
+  "pass_criteria": [
+    "No new standing OpenNort role is required.",
+    "The mapping can be represented with existing charter, finding, checkpoint, and implementation-plan artifacts.",
+    "Implementation remains in Run 2."
+  ],
+  "fail_criteria": [
+    "Spec tasks directly edit code during Run 1.",
+    "The mapping depends on hidden state outside OpenNort artifacts.",
+    "A user-owned policy choice is converted into an accepted fact."
+  ],
+  "negative_controls": [
+    "Spec task that directly edits code before Round F approval.",
+    "Spec ambiguity that is silently converted into accepted evidence.",
+    "Mapping that requires hidden state not represented in OpenNort artifacts."
+  ]
+}

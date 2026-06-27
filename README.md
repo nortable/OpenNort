@@ -84,6 +84,35 @@ docs/                             design notes (redesign-mirror-claude-roadmap)
 examples/synthetic-run/          deterministic Run-1 plan-run fixture (the self-test output)
 ```
 
+## Codex extension package
+
+OpenNort is packaged for Codex at two levels:
+
+- `.codex-plugin/plugin.json` makes the repository a Codex extension package and points Codex at
+  `./skills/`.
+- `skills/research-codex-workflow/SKILL.md` remains the executable skill contract. Codex reads its
+  frontmatter first, then loads the full workflow only after explicit `$research-codex-workflow`
+  invocation or an implicit match on the skill description.
+
+The extension package is a distribution and presentation layer, not a second orchestrator. Keep the
+workflow rules, role split, schemas, and completion gate in the skill and its references. Optional
+Codex UI metadata lives in `skills/research-codex-workflow/agents/openai.yaml`.
+
+Validate the package surface before publishing or reinstalling:
+
+```powershell
+python skills/research-codex-workflow/scripts/validate_extension_package.py
+python /path/to/plugin-creator/scripts/validate_plugin.py .
+```
+
+`validate_extension_package.py` is intentionally a package-surface and fixture-metadata check. It does
+not prove that external adapters work; integration behavior must pass a dedicated schema-fit runner
+before being treated as supported.
+
+See `docs/codex-extension-compatibility-and-integration-tests.md` for the extension compatibility
+contract and the integration-test plan for Spec Kit mapping, GitHub PR bridge intake, third-party
+skill marketplace audit, and optional runtime adapter boundaries.
+
 ## Quick start
 
 ```bash

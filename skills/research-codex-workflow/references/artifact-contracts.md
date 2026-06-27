@@ -183,6 +183,35 @@ Worker ownership is expressed as a `dispatches[]` entry in the Dispatch Plan bel
 expected output). There is a single producer of ownership (the dispatch plan), so the prose and the
 machine artifact cannot contradict each other.
 
+## External Workflow Schema-Fit Gate
+
+Before OpenNort integrates an external workflow, bridge, marketplace asset, or runtime adapter, it must
+pass a schema-fit gate. The default outcome is to map the input into existing artifacts rather than
+add new roles or schemas.
+
+Minimum mapping evidence:
+
+- source system and version or retrieval date;
+- input fixture path under `examples/integration-fit/` or a real run artifact;
+- target OpenNort artifacts and fields;
+- pass criteria and fail criteria;
+- validation command and output;
+- explicit statement of whether `schemas.py` stayed unchanged.
+
+The first integration tests cover:
+
+- Spec Kit mapping: spec/plan/tasks -> charter, findings, implementation plan, and checkpoint;
+- GitHub PR bridge: base/head SHA and diff hunks -> Code Reviewer findings and merge-gate ledger
+  classes;
+- Skill Marketplace Audit: listing metadata -> license, dependency, permission, prompt-safety, and
+  schema-fit findings;
+- Runtime Adapter Boundary: approved implementation plan -> adapter execution evidence -> Evidence
+  Tribunal rerun and Round G final report.
+
+Reject or defer an integration when it requires hidden state, weakens the generate/verify boundary,
+owns final truth outside the Evidence Tribunal, imports third-party instructions wholesale, or makes a
+runtime framework mandatory for basic skill use.
+
 ## Dispatch Plan
 
 ```yaml
